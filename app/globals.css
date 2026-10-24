@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: var(--font-playfair), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  
+  --gold-primary: #C5A059;
+  --gold-light: #DFBA73;
+  --gold-dark: #8F6D2C;
+  --gold-gradient: linear-gradient(135deg, #ECC880 0%, #C5A059 50%, #9E7B35 100%);
+  --gold-gradient-soft: linear-gradient(135deg, #FBF6EA 0%, #F5E8CB 100%);
+  --burgundy-deep: #2A0815;
+  --emerald-deep: #0D261E;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  background-color: #ffffff;
+  color: #1A1A1F;
+}
+
+h1, h2, h3, h4, .font-serif, .font-display {
+  font-family: var(--font-serif);
+}
+
+.font-script {
+  font-family: var(--font-alex), "Alex Brush", cursive;
+}
+
+/* Luxury Gold Text Gradient */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #B58A32 0%, #E3BE6C 50%, #8C6418 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gold-bright {
+  background: linear-gradient(135deg, #FFF0B8 0%, #E6C26E 50%, #FAF0CA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-gold-gradient {
+  background: linear-gradient(135deg, #DFBA73 0%, #C5A059 50%, #9E7B35 100%);
+}
+
+.bg-gold-gradient-dark {
+  background: linear-gradient(135deg, #322514 0%, #1A140B 100%);
+}
+
+.border-gold-subtle {
+  border-color: rgba(197, 160, 89, 0.35);
+}
+
+/* Shimmer animation for luxury accents */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+/* Continuous ticker marquee */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Subtle pulse glow */
+@keyframes goldPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(197, 160, 89, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(197, 160, 89, 0.5);
+  }
+}
+
+.gold-glow {
+  animation: goldPulse 4s infinite;
+}
+
+/* Custom delicate scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F3EFEA;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C5A059;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9E7B35;
 }

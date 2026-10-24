@@ -1,0 +1,542 @@
+export interface Product {
+  id: string;
+  name: string;
+  code: string;
+  category:
+    | "earrings"
+    | "rings"
+    | "necklaces"
+    | "bangles"
+    | "mangalsutra"
+    | "pendants"
+    | "bracelets"
+    | "chains"
+    | "coins";
+  metal: "gold" | "diamond" | "silver";
+  purity: "24KT (999 Pure)" | "22KT (916 BIS)" | "18KT Gold & Diamond" | "925 Sterling Silver";
+  gender: "women" | "men" | "kids" | "unisex";
+  occasion: "wedding" | "daily-wear" | "light-occasion" | "festive";
+  price: number;
+  originalPrice: number;
+  grossWeight: number; // in grams
+  netGoldWeight: number; // in grams
+  stoneWeight?: string; // in carats
+  makingCharges: number;
+  gst: number;
+  tag?: "Bestseller" | "Heritage Bridal" | "New Arrival" | "Trending" | "24K Pure Bullion";
+  rating: number;
+  reviewsCount: number;
+  inStock: boolean;
+  description: string;
+  images: string[];
+  dimensions?: string;
+  certification: string;
+}
+
+export const CATEGORIES = [
+  { id: "all", label: "All Jewellery" },
+  { id: "necklaces", label: "Necklaces & Harams" },
+  { id: "earrings", label: "Earrings & Jhumkas" },
+  { id: "rings", label: "Rings & Solitaires" },
+  { id: "bangles", label: "Bangles & Kadas" },
+  { id: "mangalsutra", label: "Mangalsutra" },
+  { id: "pendants", label: "Pendants & Sets" },
+  { id: "bracelets", label: "Bracelets" },
+  { id: "chains", label: "Gold Chains" },
+  { id: "coins", label: "Lakshmi 24K Coins" },
+];
+
+export const METALS = [
+  { id: "all", label: "All Metals" },
+  { id: "gold", label: "Gold (22KT / 24KT)" },
+  { id: "diamond", label: "Certified Diamond" },
+  { id: "silver", label: "Silver & Filigree (925)" },
+];
+
+export const OCCASIONS = [
+  { id: "all", label: "All Occasions" },
+  { id: "wedding", label: "Vivaha Bridal" },
+  { id: "festive", label: "Festive & Puja" },
+  { id: "daily-wear", label: "Everyday Elegance" },
+  { id: "light-occasion", label: "Light Occasions" },
+];
+
+export const LIVE_RATES = {
+  gold24k: 7980,
+  gold22k: 7350,
+  gold18k: 6030,
+  silver999: 98.5,
+  lastUpdated: "Today, 10:30 AM IST",
+  trend: "+0.45%",
+};
+
+export const PRODUCTS: Product[] = [
+  {
+    id: "yj-gld-001",
+    name: "Rajwada Royal 22K Gold Antique Choker Set",
+    code: "YJ-BRD-8821",
+    category: "necklaces",
+    metal: "gold",
+    purity: "22KT (916 BIS)",
+    gender: "women",
+    occasion: "wedding",
+    price: 384500,
+    originalPrice: 412000,
+    grossWeight: 48.6,
+    netGoldWeight: 46.2,
+    stoneWeight: "2.40 cts natural ruby & emerald beads",
+    makingCharges: 32500,
+    gst: 11200,
+    tag: "Heritage Bridal",
+    rating: 4.9,
+    reviewsCount: 42,
+    inStock: true,
+    description:
+      "Handcrafted by master artisans with intricate filigree work, kundan detailing, and dangling pearl clusters. BIS 916 hallmarked for an unforgettable bridal grandeur.",
+    images: [
+      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "BIS Hallmarked (HUID #YJ9167812) & 100% Certified",
+  },
+  {
+    id: "yj-dia-002",
+    name: "Eternity Solitaire Diamond Ring 1.25 Carat",
+    code: "YJ-DIA-1094",
+    category: "rings",
+    metal: "diamond",
+    purity: "18KT Gold & Diamond",
+    gender: "women",
+    occasion: "wedding",
+    price: 198000,
+    originalPrice: 225000,
+    grossWeight: 4.8,
+    netGoldWeight: 4.55,
+    stoneWeight: "1.25 ct VVS-EF Solitaire + 0.35 ct accents",
+    makingCharges: 14500,
+    gst: 5770,
+    tag: "Bestseller",
+    rating: 5.0,
+    reviewsCount: 68,
+    inStock: true,
+    description:
+      "Exquisite central brilliant-cut solitaire encased in an 18K yellow gold band with micro-pavé diamonds along the shank. Accompanied by official IGI certificate.",
+    images: [
+      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "IGI & SGL Certified Diamond (Color E-F, Clarity VVS1)",
+  },
+  {
+    id: "yj-gld-003",
+    name: "Mayura Temple Craft 22K Gold Jhumkas",
+    code: "YJ-JHM-4402",
+    category: "earrings",
+    metal: "gold",
+    purity: "22KT (916 BIS)",
+    gender: "women",
+    occasion: "festive",
+    price: 94500,
+    originalPrice: 102000,
+    grossWeight: 12.4,
+    netGoldWeight: 12.4,
+    makingCharges: 8600,
+    gst: 2750,
+    tag: "Trending",
+    rating: 4.8,
+    reviewsCount: 51,
+    inStock: true,
+    description:
+      "Graceful peacock motif crafted in traditional matte antique 22K gold, accented with delicate golden ghungroos and floral stud tops.",
+    images: [
+      "https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "BIS Hallmarked with Laser HUID",
+  },
+  {
+    id: "yj-slv-004",
+    name: "Odisha Tarakasi Pure 925 Silver Filigree Peacock Necklace",
+    code: "YJ-SLV-7719",
+    category: "necklaces",
+    metal: "silver",
+    purity: "925 Sterling Silver",
+    gender: "women",
+    occasion: "festive",
+    price: 24800,
+    originalPrice: 28500,
+    grossWeight: 54.0,
+    netGoldWeight: 0,
+    makingCharges: 4200,
+    gst: 720,
+    tag: "Bestseller",
+    rating: 4.9,
+    reviewsCount: 39,
+    inStock: true,
+    description:
+      "Authentic GI-tagged Cuttack Tarakasi filigree masterpiece woven by master Odia karigars using 99% pure drawn silver wire. Lightweight yet stunningly regal.",
+    images: [
+      "https://images.unsplash.com/photo-1611591475879-11536b135154?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "Certified 925 Sterling Silver Hallmark",
+  },
+  {
+    id: "yj-gld-005",
+    name: "Classic Sankha Pola Style 22K Gold Kada Bangle (Pair)",
+    code: "YJ-BNG-3190",
+    category: "bangles",
+    metal: "gold",
+    purity: "22KT (916 BIS)",
+    gender: "women",
+    occasion: "daily-wear",
+    price: 148000,
+    originalPrice: 162000,
+    grossWeight: 19.8,
+    netGoldWeight: 19.8,
+    makingCharges: 11500,
+    gst: 4310,
+    tag: "Trending",
+    rating: 4.9,
+    reviewsCount: 84,
+    inStock: true,
+    description:
+      "Timeless gold kadas engineered with ergonomic inner curves for comfortable daily wear. Finished in lustrous dual-tone polish with screw hinge lock.",
+    images: [
+      "https://images.unsplash.com/photo-1611591475879-11536b135154?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "BIS 916 Hallmark Stamped",
+  },
+  {
+    id: "yj-dia-006",
+    name: "Celestial Bloom Diamond Pendant with 18K Chain",
+    code: "YJ-PND-9011",
+    category: "pendants",
+    metal: "diamond",
+    purity: "18KT Gold & Diamond",
+    gender: "women",
+    occasion: "daily-wear",
+    price: 46500,
+    originalPrice: 52000,
+    grossWeight: 3.6,
+    netGoldWeight: 3.48,
+    stoneWeight: "0.42 ct Natural Round Diamonds (GH-SI)",
+    makingCharges: 4200,
+    gst: 1350,
+    tag: "New Arrival",
+    rating: 4.7,
+    reviewsCount: 29,
+    inStock: true,
+    description:
+      "A sparkling floral motif clustered with hand-picked diamonds suspended from an elegant 18-karat Italian-link gold chain. Perfect for workwear and gifting.",
+    images: [
+      "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "SGL Diamond Certificate with Card",
+  },
+  {
+    id: "yj-gld-007",
+    name: "Subha Mangalyam 22K Gold & Black Beads Mangalsutra",
+    code: "YJ-MNG-6045",
+    category: "mangalsutra",
+    metal: "gold",
+    purity: "22KT (916 BIS)",
+    gender: "women",
+    occasion: "wedding",
+    price: 88500,
+    originalPrice: 96000,
+    grossWeight: 11.5,
+    netGoldWeight: 10.8,
+    makingCharges: 7200,
+    gst: 2580,
+    tag: "Bestseller",
+    rating: 4.9,
+    reviewsCount: 63,
+    inStock: true,
+    description:
+      "Sacred double-stringed black spinel bead chain with an auspicious handcrafted 22K gold pendant featuring Lakshmi and kalash blessings.",
+    images: [
+      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "BIS Hallmark Guaranteed",
+  },
+  {
+    id: "yj-gld-008",
+    name: "Laxmi Ganesh 24K (999) Pure Gold Bullion Coin 10g",
+    code: "YJ-COIN-0010",
+    category: "coins",
+    metal: "gold",
+    purity: "24KT (999 Pure)",
+    gender: "unisex",
+    occasion: "festive",
+    price: 81200,
+    originalPrice: 83500,
+    grossWeight: 10.0,
+    netGoldWeight: 10.0,
+    makingCharges: 1400,
+    gst: 2360,
+    tag: "24K Pure Bullion",
+    rating: 5.0,
+    reviewsCount: 140,
+    inStock: true,
+    description:
+      "Investment-grade 999.9 pure gold coin embossed with Lord Ganesha and Goddess Lakshmi. Tamper-evident certicard packing with QR authentication.",
+    images: [
+      "https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "NABL Assayed 999.9 Purity Certificate with Laser Serial",
+  },
+  {
+    id: "yj-dia-009",
+    name: "Royal Tennis Bracelet with 3.5 Ct Round Diamonds",
+    code: "YJ-BRC-2810",
+    category: "bracelets",
+    metal: "diamond",
+    purity: "18KT Gold & Diamond",
+    gender: "women",
+    occasion: "wedding",
+    price: 285000,
+    originalPrice: 320000,
+    grossWeight: 14.2,
+    netGoldWeight: 13.5,
+    stoneWeight: "3.50 ct Total Diamond Weight (IGI Certified)",
+    makingCharges: 18500,
+    gst: 8300,
+    tag: "Heritage Bridal",
+    rating: 4.9,
+    reviewsCount: 31,
+    inStock: true,
+    description:
+      "A seamless continuous circle of 52 scintillating round brilliant diamonds, securely prong-set in 18K yellow or white gold with a double safety clasp.",
+    images: [
+      "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "IGI Worldwide Diamond Grading Report",
+  },
+  {
+    id: "yj-gld-010",
+    name: "Men's Imperial Solid Curb Chain 22K Gold 30g",
+    code: "YJ-CHN-5509",
+    category: "chains",
+    metal: "gold",
+    purity: "22KT (916 BIS)",
+    gender: "men",
+    occasion: "daily-wear",
+    price: 228000,
+    originalPrice: 245000,
+    grossWeight: 30.0,
+    netGoldWeight: 30.0,
+    makingCharges: 14200,
+    gst: 6640,
+    tag: "Trending",
+    rating: 4.8,
+    reviewsCount: 47,
+    inStock: true,
+    description:
+      "Substantial and masculine Cuban curb chain engineered from solid 22K yellow gold with precision bevelled links and lobster lock.",
+    images: [
+      "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "BIS 916 Hallmark Laser Engraved",
+  },
+  {
+    id: "yj-slv-011",
+    name: "Panchmukhi Hanuman Ji Pure 999 Silver Idol for Car / Pooja",
+    code: "YJ-IDL-1104",
+    category: "coins",
+    metal: "silver",
+    purity: "925 Sterling Silver",
+    gender: "unisex",
+    occasion: "festive",
+    price: 18500,
+    originalPrice: 21000,
+    grossWeight: 145.0,
+    netGoldWeight: 0,
+    makingCharges: 3500,
+    gst: 540,
+    tag: "Bestseller",
+    rating: 5.0,
+    reviewsCount: 112,
+    inStock: true,
+    description:
+      "Handcrafted solid silver deity idol with micro-chiseled facial detailing, weapons, and protective blessings. As praised in verified customer reviews.",
+    images: [
+      "https://images.unsplash.com/photo-1611591475879-11536b135154?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "Silver Hallmark with Certificate of Purity",
+  },
+  {
+    id: "yj-gld-012",
+    name: "Kids Floral Nazariya 22K Gold & Black Beads Bracelet",
+    code: "YJ-KID-0922",
+    category: "bracelets",
+    metal: "gold",
+    purity: "22KT (916 BIS)",
+    gender: "kids",
+    occasion: "daily-wear",
+    price: 19500,
+    originalPrice: 22000,
+    grossWeight: 2.5,
+    netGoldWeight: 2.3,
+    makingCharges: 2100,
+    gst: 570,
+    tag: "New Arrival",
+    rating: 4.9,
+    reviewsCount: 38,
+    inStock: true,
+    description:
+      "Specially designed for children with smooth rounded edges, baby-safe hypoallergenic polish, and protective black beads with an adjustable gold chain.",
+    images: [
+      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "BIS Hallmarked Child-Safe Gold",
+  },
+];
+
+export const SHOWROOMS = [
+  {
+    city: "Bhubaneswar",
+    name: "Master Canteen Flagship",
+    address: "Station Square, Unit-3, Master Canteen, Bhubaneswar, Odisha 751001",
+    phone: "0674-2534016 / 17 / 18",
+    timing: "10:30 AM - 8:30 PM (Open 7 Days)",
+    floors: "4 Floors: Gold Floor • Diamond Lounge • Silver Palace • Bridal Suite",
+    mapUrl: "https://maps.google.com/?q=Master+Canteen+Bhubaneswar",
+  },
+  {
+    city: "Bhubaneswar",
+    name: "Raghunathpur Grand Showroom",
+    address: "Nandankanan Road, Raghunathpur, Bhubaneswar, Odisha 751024",
+    phone: "0674-2978900",
+    timing: "11:00 AM - 9:00 PM (Open 7 Days)",
+    floors: "Exclusive Luxury Vivaha Bridal Gallery & Valet Parking",
+    mapUrl: "https://maps.google.com/?q=Raghunathpur+Bhubaneswar",
+  },
+  {
+    city: "Cuttack",
+    name: "CDA Sector-9 Heritage Showroom",
+    address: "Sector 9, CDA Market Complex, Cuttack, Odisha 753014",
+    phone: "0671-2365400",
+    timing: "10:30 AM - 8:30 PM",
+    floors: "Home of Famous Odisha Silver Tarakasi Filigree Artisans",
+    mapUrl: "https://maps.google.com/?q=CDA+Cuttack",
+  },
+  {
+    city: "Cuttack",
+    name: "Cantonment Road Boutique",
+    address: "Near Barabati Stadium, Cantonment Road, Cuttack, Odisha 753001",
+    phone: "0671-2309811",
+    timing: "10:30 AM - 8:30 PM",
+    floors: "High-Value Diamond Solitaire Lounge & Bullion Desk",
+    mapUrl: "https://maps.google.com/?q=Cantonment+Road+Cuttack",
+  },
+  {
+    city: "Brahmapur",
+    name: "Brahmapur Royal Showroom",
+    address: "Urban Bank Road, Giri Market, Brahmapur, Odisha 760001",
+    phone: "0680-2223450",
+    timing: "10:30 AM - 8:30 PM",
+    floors: "Southern Odisha's Largest 3-Storey Jewellery Destination",
+    mapUrl: "https://maps.google.com/?q=Brahmapur+Odisha",
+  },
+  {
+    city: "New Delhi",
+    name: "Delhi South Ext / Lajpat Boutique",
+    address: "Central Market, Lajpat Nagar-II, New Delhi 110024",
+    phone: "011-41009822",
+    timing: "11:00 AM - 8:30 PM",
+    floors: "Exclusive Odisha Royal Heritage & Vivaha Collection in NCR",
+    mapUrl: "https://maps.google.com/?q=Lajpat+Nagar+Delhi",
+  },
+];
+
+export const TESTIMONIALS = [
+  {
+    name: "Sanjeev Khatoi",
+    location: "Bhubaneswar",
+    verified: true,
+    rating: 5,
+    title: "Perfect Panchmukhi Hanuman Ji silver idol & unmatched purity",
+    text: "I searched across Delhi and Odisha for a genuine 999 solid silver Panchmukhi Hanuman Ji for my car dashboard. Most places sell cheap silver-coated pieces with rough detailing. At Yashraj Jewellers Master Canteen showroom, I found an absolute masterpiece! The craftsmanship is divine.",
+  },
+  {
+    name: "Aparna Rout",
+    location: "Cuttack",
+    verified: true,
+    rating: 5,
+    title: "Transparent billing & polite staff made bridal shopping effortless",
+    text: "We bought my complete bridal wedding set from Yashraj Jewellers. What impressed my father most was their 100% transparent billing — every gram of gold, stone carat, and making charge was clearly itemized without any hidden percentages. Truly Odisha's most trusted jeweller!",
+  },
+  {
+    name: "Aarthi Moorthy",
+    location: "Bengaluru (Visited Odisha)",
+    verified: true,
+    rating: 5,
+    title: "Heaven for genuine Cuttack Tarakasi silver filigree work",
+    text: "If you want authentic Odisha silver filigree work as a precious memorabilia or bridal gift, Yashraj is the place. The karigars' intricate wire detailing is breathtaking. Their staff patiently showed us dozen designs without tiring.",
+  },
+  {
+    name: "David Ngo",
+    location: "International Buyer (Singapore)",
+    verified: true,
+    rating: 5,
+    title: "World class solitaire diamond finish & swift certified shipping",
+    text: "Purchased the 1.25 ct diamond solitaire ring via their live video consultation. The certificate arrived with IGI verification, securely packaged in tamper-proof seal. The brilliance is spectacular.",
+  },
+  {
+    name: "Priyanka Mohapatra",
+    location: "Bhubaneswar (Master Canteen)",
+    verified: true,
+    rating: 5,
+    title: "Generational trust since my grandmother's wedding in 1974",
+    text: "My grandmother bought her wedding jewellery from Yashraj, my mother did, and last month I selected my Vivaha bridal choker set here. The consistency of 22K 916 gold purity and the warmth of their Master Canteen staff is unmatched across Odisha.",
+  },
+  {
+    name: "Rajesh & Sunita Agrawal",
+    location: "Cuttack (CDA Sector 9)",
+    verified: true,
+    rating: 5,
+    title: "Sone Pe Suhaga monthly scheme helped plan daughter's wedding",
+    text: "We enrolled in the 11-month Sone Pe Suhaga gold savings scheme for our daughter's wedding trousseau. The 12th month bonus was completely credited by Yashraj, and we got 100% discount on making charges! Unbelievable savings and total peace of mind.",
+  },
+  {
+    name: "Dr. Debabrata Mishra",
+    location: "Rourkela (AIIMS Specialist)",
+    verified: true,
+    rating: 5,
+    title: "Real-time bullion transparency and zero deduction on old gold exchange",
+    text: "I brought in my family's 30-year-old gold bangles for exchange. They assayed each piece in front of me using digital karat spectrometers without melting or cutting. The valuation was 100% transparent with zero unfair deductions.",
+  },
+  {
+    name: "Ananya Sen",
+    location: "Kolkata (Park Street)",
+    verified: true,
+    rating: 5,
+    title: "Exquisite diamond cocktail ring & IGI laser certification",
+    text: "I ordered an 18KT diamond cocktail ring after an evening video-call with their gemologist. The diamond came with sealed IGI certificates and laser inscriptions visible under the loupe. The fire and clarity exceed top Mumbai high-street brands!",
+  },
+  {
+    name: "Subrat & Meera Nayak",
+    location: "Brahmapur (Giri Market)",
+    verified: true,
+    rating: 5,
+    title: "Handcrafted Temple Jewellery set that stole the spotlight",
+    text: "The master karigari on my Lakshmi Kasu Haram necklace was breathtaking. Every divine motif was sculpted with devotion and precision. Guests at our reception couldn't stop admiring the antique matte finish.",
+  },
+  {
+    name: "Capt. Vikramjit Singh",
+    location: "New Delhi (Lajpat Nagar)",
+    verified: true,
+    rating: 5,
+    title: "Flawless insured delivery & luxury presentation packaging",
+    text: "Ordered the 24K pure Lakshmi-Ganesh gold coin and silver puja set for Diwali. It arrived in Delhi in a tamper-proof armored courier box with silk-lined velvet cases. Exceptional pan-India service and utmost security.",
+  },
+];
