@@ -97,8 +97,10 @@ export default function Navbar() {
           {/* Wholesale Trade Partner CTA */}
           <button
             onClick={() => {
-              const el = document.getElementById("wholesale-section");
-              el?.scrollIntoView({ behavior: "smooth" });
+              const text = encodeURIComponent(
+                "Namaste Yashraj Jewellers! I am interested in wholesale jewellery collections, trade pricing, and catalogue for my business."
+              );
+              window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
             }}
             className="hidden sm:inline-flex items-center space-x-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border border-[#C5A059] text-[#7A5B1F] bg-[#FAF3E0] hover:bg-[#C5A059] hover:text-white transition shadow-xs"
           >
@@ -625,7 +627,7 @@ export default function Navbar() {
                           const text = encodeURIComponent(
                             "Namaste Yashraj Jewellers! I would like to make an online payment. Please share your official UPI payment link or QR code."
                           );
-                          window.open(`https://wa.me/918917652306?text=${text}`, "_blank");
+                          window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
                         },
                       },
                     ].map((item, idx) => (
@@ -965,7 +967,7 @@ export default function Navbar() {
                       const text = encodeURIComponent(
                         "Namaste Yashraj Jewellers! I would like to make an online payment. Please share your official UPI QR code or payment link."
                       );
-                      window.open(`https://wa.me/918917652306?text=${text}`, "_blank");
+                      window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
                     }}
                     className="block w-full text-left py-1 hover:text-[#8F6D2C]"
                   >
@@ -984,7 +986,7 @@ export default function Navbar() {
                 const text = encodeURIComponent(
                   "Namaste Yashraj Jewellery! I am a jewellery retailer/reseller and would like to enquire about your wholesale collections and trade pricing."
                 );
-                window.open(`https://wa.me/918917652306?text=${text}`, "_blank");
+                window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
               }}
               className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-stone-900 font-bold text-xs uppercase tracking-wider text-center shadow-md hover:shadow-lg transition-transform"
             >

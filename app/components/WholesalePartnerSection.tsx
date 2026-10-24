@@ -23,7 +23,7 @@ export default function WholesalePartnerSection() {
     const text = encodeURIComponent(
       "Namaste Yashraj Jewellery! I am a jewellery retailer/reseller and would like to enquire about your wholesale collections, wholesale pricing, and catalogue for my business."
     );
-    window.open(`https://wa.me/918917652306?text=${text}`, "_blank");
+    window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
   };
 
   const ADVANTAGES = [

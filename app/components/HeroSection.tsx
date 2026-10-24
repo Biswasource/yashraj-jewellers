@@ -180,16 +180,27 @@ export default function HeroSection() {
                         whileHover={{ scale: 1.05, y: -2 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
-                          if (item.id === 1) {
-                            const ratesEl = document.getElementById("rates");
-                            if (ratesEl) ratesEl.scrollIntoView({ behavior: "smooth" });
-                            else setIsAppointmentOpen(true);
-                          } else if (item.id === 2) {
-                            const partnerEl = document.getElementById("wholesale-partner-section");
-                            if (partnerEl) partnerEl.scrollIntoView({ behavior: "smooth" });
-                            else setIsAppointmentOpen(true);
+                          if (item.id === 2) {
+                            // Direct WhatsApp Wholesale Enquiry to 70083 43796
+                            const msg = encodeURIComponent(
+                              "Namaste Yashraj Jewellers! I am interested in your wholesale jewellery collections, minimal pricing, and catalogue for my retail business."
+                            );
+                            window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
+                          } else if (item.id === 1) {
+                            const msg = encodeURIComponent(
+                              "Namaste Yashraj Jewellers! I would like to enquire about today's live gold rate and instant cash valuation for selling my gold."
+                            );
+                            window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
+                          } else if (item.id === 4) {
+                            const msg = encodeURIComponent(
+                              "Namaste Yashraj Jewellers! I want to enquire about exchanging my old gold for new jewellery and computerized purity valuation."
+                            );
+                            window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
                           } else {
-                            setIsAppointmentOpen(true);
+                            const msg = encodeURIComponent(
+                              "Namaste Yashraj Jewellers! I would like to enquire about booking a showroom visit and viewing your luxury jewellery collections."
+                            );
+                            window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
                           }
                         }}
                         className="px-6 sm:px-7 py-3.5 rounded-full border border-white/60 text-white font-semibold text-xs sm:text-sm tracking-wider uppercase hover:bg-white/15 transition-all backdrop-blur-md shadow-md"

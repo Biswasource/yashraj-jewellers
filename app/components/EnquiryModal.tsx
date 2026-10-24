@@ -35,7 +35,7 @@ export default function EnquiryModal() {
     `Hello Yashraj Jewellers,\n\nI would like to enquire about:\n*Product:* ${product.name}\n*SKU:* ${product.code}\n*Purity:* ${product.purity}\n*Gross Weight:* ${product.grossWeight}g\n*Quoted Price:* ₹${product.price.toLocaleString("en-IN")}\n\nPlease share latest showroom availability, purity certificate copy, and high-definition viewing options.\n\nThank you!`
   );
 
-  const whatsappUrl = `https://wa.me/916742534016?text=${whatsappMessage}`;
+  const whatsappUrl = `https://wa.me/917008343796?text=${whatsappMessage}`;
 
   const handleSubmitEnquiry = (e: React.FormEvent) => {
     e.preventDefault();

@@ -167,13 +167,13 @@ export default function FollowUsSection() {
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.96 }}
-                href="https://wa.me/918917652306"
+                href="https://wa.me/917008343796"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs hover:shadow"
               >
                 <MessageCircle className="w-4 h-4 text-white" />
-                <span>WhatsApp: 8917652306</span>
+                <span>WhatsApp: 70083 43796</span>
               </motion.a>
 
               <motion.a

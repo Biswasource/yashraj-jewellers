@@ -60,7 +60,7 @@ export default function CartDrawer() {
     )}\n\nPlease share latest showroom availability, purity certs, and best pricing at my preferred showroom.\n\nThank you!`
   );
 
-  const whatsappUrl = `https://wa.me/916742534016?text=${whatsappMessage}`;
+  const whatsappUrl = `https://wa.me/917008343796?text=${whatsappMessage}`;
 
   const handleSubmitShowroomEnquiry = (e: React.FormEvent) => {
     e.preventDefault();

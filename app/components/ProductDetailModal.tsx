@@ -272,7 +272,7 @@ export default function ProductDetailModal() {
 
                 {/* Direct WhatsApp link */}
                 <a
-                  href={`https://wa.me/916742534016?text=${encodeURIComponent(
+                  href={`https://wa.me/917008343796?text=${encodeURIComponent(
                     `Hello Yashraj Jewellers, I would like to enquire about: ${product.name} (${product.code}), Quoted Price: ₹${product.price.toLocaleString("en-IN")}. Please share details.`
                   )}`}
                   target="_blank"
