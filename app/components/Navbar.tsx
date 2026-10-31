@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useStore } from "../context/StoreContext";
 import { CATEGORIES } from "../data/products";
 import {
@@ -15,9 +17,11 @@ import {
   Calendar,
   Gem,
   Building2,
+  Search,
 } from "lucide-react";
 
 export default function Navbar() {
+  const router = useRouter();
   const {
     cartCount,
     wishlist,
@@ -28,12 +32,12 @@ export default function Navbar() {
     setSelectedCategory,
     setSelectedMetal,
     setSelectedOccasion,
-    scrollToProducts,
   } = useStore();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [navSearch, setNavSearch] = useState("");
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -51,21 +55,41 @@ export default function Navbar() {
     setSelectedCategory(cat);
     setActiveDropdown(null);
     setIsMobileMenuOpen(false);
-    scrollToProducts();
+    if (cat === "all") {
+      router.push("/products");
+    } else {
+      router.push(`/products?category=${cat}`);
+    }
   };
 
   const handleMetalClick = (metal: string) => {
     setSelectedMetal(metal);
     setActiveDropdown(null);
     setIsMobileMenuOpen(false);
-    scrollToProducts();
+    if (metal === "all") {
+      router.push("/products");
+    } else {
+      router.push(`/products?metal=${metal}`);
+    }
   };
 
   const handleOccasionClick = (occ: string) => {
     setSelectedOccasion(occ);
     setActiveDropdown(null);
     setIsMobileMenuOpen(false);
-    scrollToProducts();
+    if (occ === "all") {
+      router.push("/products");
+    } else {
+      router.push(`/products?occasion=${occ}`);
+    }
+  };
+
+  const handleNavSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (navSearch.trim()) {
+      router.push(`/products?search=${encodeURIComponent(navSearch.trim())}`);
+      setNavSearch("");
+    }
   };
 
   return (
@@ -74,7 +98,7 @@ export default function Navbar() {
       {/* 2. MAIN BRAND HEADER */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
         {/* Left Side: LOGO (Left Aligned with Round Emblem) */}
-        <a href="#" className="flex items-center space-x-2.5 sm:space-x-3.5 group text-left">
+        <Link href="/" className="flex items-center space-x-2.5 sm:space-x-3.5 group text-left">
           <div className="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full overflow-hidden shadow-md border-2 border-[#C5A059]/60 group-hover:scale-105 transition-all duration-300 shrink-0 bg-[#072016]">
             <img
               src="/logo.png"
@@ -90,10 +114,35 @@ export default function Navbar() {
               Jewellers • Est. 1982
             </p>
           </div>
-        </a>
+        </Link>
 
-        {/* Right Side: ACTIONS (Wholesale Enquiry, Wishlist, Enquiry Bag, and Mobile Menu Toggle) */}
+        {/* Center/Right Side: ACTIONS (Search, Wholesale Enquiry, Wishlist, Enquiry Bag, and Mobile Menu Toggle) */}
         <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Global Search Bar */}
+          <form
+            onSubmit={handleNavSearchSubmit}
+            className="hidden md:flex items-center relative w-44 lg:w-56"
+          >
+            <input
+              type="text"
+              value={navSearch}
+              onChange={(e) => setNavSearch(e.target.value)}
+              placeholder="Search catalogue..."
+              className="w-full pl-8 pr-3 py-1.5 rounded-full bg-[#FAF9F5] border border-[#DEC9A2] text-xs text-stone-900 placeholder-stone-400 focus:outline-hidden focus:border-[#C5A059] focus:w-64 transition-all duration-300"
+            />
+            <Search className="w-3.5 h-3.5 text-[#8F6D2C] absolute left-2.5 pointer-events-none" />
+          </form>
+
+          {/* Mobile Search Button */}
+          <Link
+            href="/products"
+            className="md:hidden p-2 text-stone-800 hover:text-[#C5A059] transition-colors"
+            aria-label="Search Jewellery"
+            title="Search Catalogue"
+          >
+            <Search className="w-5 h-5" />
+          </Link>
+
           {/* Wholesale Trade Partner CTA */}
           <button
             onClick={() => {
@@ -102,7 +151,7 @@ export default function Navbar() {
               );
               window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
             }}
-            className="hidden sm:inline-flex items-center space-x-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border border-[#C5A059] text-[#7A5B1F] bg-[#FAF3E0] hover:bg-[#C5A059] hover:text-white transition shadow-xs"
+            className="hidden lg:inline-flex items-center space-x-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border border-[#C5A059] text-[#7A5B1F] bg-[#FAF3E0] hover:bg-[#C5A059] hover:text-white transition shadow-xs"
           >
             <Building2 className="w-3.5 h-3.5" />
             <span>Wholesale Enquiry</span>
@@ -574,76 +623,6 @@ export default function Navbar() {
                 </div>
               )}
             </li>
-
-            {/* 7. Pay OnLine ∨ */}
-            <li
-              className="relative group py-3 cursor-pointer"
-              onMouseEnter={() => setActiveDropdown("payonline")}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <button
-                onClick={() => {
-                  const el = document.getElementById("scheme-section");
-                  el?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="flex items-center space-x-1.5 hover:text-[#9E7B35] transition-colors py-1 text-[#8F6D2C] font-semibold"
-              >
-                <span>Pay OnLine</span>
-                <ChevronDown className="w-3.5 h-3.5 text-[#8F6D2C] group-hover:rotate-180 transition-transform duration-200" />
-              </button>
-
-              {activeDropdown === "payonline" && (
-                <div className="absolute right-0 top-full w-72 bg-white border border-[#E8DFC8] shadow-2xl rounded-b-xl py-3 px-2 z-50 animate-fade-in text-stone-700">
-                  <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#9E7B35] border-b border-[#F0E6D2] mb-1">
-                    Quick Online Payments
-                  </div>
-                  <ul className="text-xs space-y-1">
-                    {[
-                      {
-                        label: "Pay Monthly Scheme (Swarna Sanchay)",
-                        action: () => {
-                          setActiveDropdown(null);
-                          document.getElementById("scheme-section")?.scrollIntoView({ behavior: "smooth" });
-                        },
-                      },
-                      {
-                        label: "Advance Booking Deposit",
-                        action: () => {
-                          setActiveDropdown(null);
-                          setIsAppointmentOpen(true);
-                        },
-                      },
-                      {
-                        label: "Custom Jewellery Order Advance",
-                        action: () => {
-                          setActiveDropdown(null);
-                          setIsAppointmentOpen(true);
-                        },
-                      },
-                      {
-                        label: "Request Instant UPI Payment Link",
-                        action: () => {
-                          setActiveDropdown(null);
-                          const text = encodeURIComponent(
-                            "Namaste Yashraj Jewellers! I would like to make an online payment. Please share your official UPI payment link or QR code."
-                          );
-                          window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
-                        },
-                      },
-                    ].map((item, idx) => (
-                      <li key={idx}>
-                        <button
-                          onClick={item.action}
-                          className="w-full text-left px-3 py-1.5 rounded hover:bg-[#FAF3E0] hover:text-[#8F6D2C] transition-colors"
-                        >
-                          {item.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </li>
           </ul>
         </div>
       </nav>
@@ -923,55 +902,6 @@ export default function Navbar() {
                     className="block w-full text-left py-1 hover:text-[#8F6D2C]"
                   >
                     Voices of Trust (Reviews)
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 7. Pay OnLine */}
-            <div className="border-b border-[#E8DFC8]/60 pb-1.5">
-              <button
-                onClick={() => setMobileExpanded(mobileExpanded === "payonline" ? null : "payonline")}
-                className="flex items-center justify-between w-full py-2.5 text-left font-semibold text-[#8F6D2C]"
-              >
-                <span className="text-sm">Pay OnLine</span>
-                <ChevronDown
-                  className={`w-4 h-4 text-[#8F6D2C] transition-transform duration-200 ${
-                    mobileExpanded === "payonline" ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {mobileExpanded === "payonline" && (
-                <div className="pl-3 pr-1 py-1 space-y-2 text-xs text-stone-600 bg-white rounded-lg p-2.5 mb-2 border border-stone-200/60">
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      document.getElementById("scheme-section")?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="block w-full text-left py-1 font-semibold text-[#8F6D2C]"
-                  >
-                    Pay Monthly Gold Scheme
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setIsAppointmentOpen(true);
-                    }}
-                    className="block w-full text-left py-1 hover:text-[#8F6D2C]"
-                  >
-                    Advance Booking Deposit
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      const text = encodeURIComponent(
-                        "Namaste Yashraj Jewellers! I would like to make an online payment. Please share your official UPI QR code or payment link."
-                      );
-                      window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
-                    }}
-                    className="block w-full text-left py-1 hover:text-[#8F6D2C]"
-                  >
-                    Request Instant UPI Link
                   </button>
                 </div>
               )}

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { PRODUCTS, CATEGORIES, METALS, OCCASIONS } from "../data/products";
 import { useStore } from "../context/StoreContext";
 import ProductCard from "./ProductCard";
-import { Filter, SlidersHorizontal, ArrowUpDown, Sparkles, Image as ImageIcon, X } from "lucide-react";
+import { Filter, SlidersHorizontal, ArrowUpDown, Sparkles, Image as ImageIcon, X, ArrowRight } from "lucide-react";
 
 export default function ProductGridSection() {
   const {
@@ -15,13 +16,14 @@ export default function ProductGridSection() {
     selectedOccasion,
     setSelectedOccasion,
     searchQuery,
+    products,
   } = useStore();
 
   const [sortBy, setSortBy] = useState<"featured" | "price-asc" | "price-desc" | "rating">("featured");
   const [priceRange, setPriceRange] = useState<string>("all");
 
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((item) => {
+    return products.filter((item) => {
       // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -222,11 +224,24 @@ export default function ProductGridSection() {
 
         {/* 2. PRODUCT CARDS GRID */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+
+            {/* Link to Full Catalogue Page */}
+            <div className="mt-12 text-center">
+              <Link
+                href="/products"
+                className="inline-flex items-center space-x-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-stone-950 font-bold text-xs uppercase tracking-widest hover:shadow-xl hover:brightness-105 transition-all"
+              >
+                <span>View Full Imperial Catalogue &amp; Advanced Filters</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </>
         ) : (
           <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-[#DFCBA5] p-8">
             <Sparkles className="w-10 h-10 text-[#C5A059] mx-auto mb-3" />

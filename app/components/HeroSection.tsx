@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "../context/StoreContext";
 import { ChevronLeft, ChevronRight, Sparkles, Shield, ArrowRight } from "lucide-react";
@@ -88,12 +89,12 @@ const QUICK_CATEGORIES = [
 ];
 
 export default function HeroSection() {
+  const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
   const {
     setSelectedCategory,
     setSelectedMetal,
     setSelectedOccasion,
-    scrollToProducts,
     setIsAppointmentOpen,
     setIsVideoCallOpen,
   } = useStore();
@@ -108,9 +109,15 @@ export default function HeroSection() {
   const slide = HERO_SLIDES[currentSlide];
 
   const handleCta = () => {
-    if (slide.category) setSelectedCategory(slide.category);
-    if (slide.metal) setSelectedMetal(slide.metal);
-    scrollToProducts();
+    if (slide.category) {
+      setSelectedCategory(slide.category);
+      router.push(`/products?category=${slide.category}`);
+    } else if (slide.metal) {
+      setSelectedMetal(slide.metal);
+      router.push(`/products?metal=${slide.metal}`);
+    } else {
+      router.push("/products");
+    }
   };
 
   return (
@@ -120,15 +127,13 @@ export default function HeroSection() {
         {HERO_SLIDES.map((item, index) => (
           <div
             key={item.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
-            }`}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+              }`}
           >
             {/* Ultra 8K Background Image with smooth subtle Ken Burns zoom */}
             <div
-              className={`absolute inset-0 bg-cover bg-center transition-transform duration-[12000ms] ease-out ${
-                index === currentSlide ? "scale-105" : "scale-100"
-              }`}
+              className={`absolute inset-0 bg-cover bg-center transition-transform duration-[12000ms] ease-out ${index === currentSlide ? "scale-105" : "scale-100"
+                }`}
               style={{ backgroundImage: `url(${item.image})` }}
             />
 
@@ -253,9 +258,8 @@ export default function HeroSection() {
             <button
               key={i}
               onClick={() => setCurrentSlide(i)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === currentSlide ? "w-8 bg-[#DFBA73]" : "w-2 bg-white/40"
-              }`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide ? "w-8 bg-[#DFBA73]" : "w-2 bg-white/40"
+                }`}
               aria-label={`Go to slide ${i + 1}`}
             />
           ))}
@@ -284,9 +288,12 @@ export default function HeroSection() {
               <MotionStaggerItem key={idx}>
                 <button
                   onClick={() => {
-                    if (cat.category) setSelectedCategory(cat.category);
-                    if ((cat as any).gender) setSelectedOccasion("all");
-                    scrollToProducts();
+                    if (cat.category) {
+                      setSelectedCategory(cat.category);
+                      router.push(`/products?category=${cat.category}`);
+                    } else {
+                      router.push("/products");
+                    }
                   }}
                   className="group flex flex-col items-center text-center cursor-pointer focus:outline-hidden w-full max-w-[190px]"
                 >

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useStore } from "../context/StoreContext";
 import { PRODUCTS } from "../data/products";
@@ -22,18 +23,17 @@ function LuxuryEmblemIcon() {
 }
 
 export default function SilverKidsShowcase() {
-  const { setSelectedMetal, setSelectedCategory, setEnquireProduct } = useStore();
+  const router = useRouter();
+  const { setSelectedMetal, setSelectedCategory } = useStore();
 
   const handleEnquireSilver = () => {
     setSelectedMetal("silver");
-    const silverProd = PRODUCTS.find((p) => p.metal === "silver") || PRODUCTS[0];
-    setEnquireProduct(silverProd);
+    router.push("/products?metal=silver");
   };
 
   const handleEnquireKids = () => {
     setSelectedCategory("kids");
-    const kidsProd = PRODUCTS.find((p) => p.gender === "kids") || PRODUCTS[0];
-    setEnquireProduct(kidsProd);
+    router.push("/products?gender=kids");
   };
 
   return (

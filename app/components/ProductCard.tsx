@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Product } from "../data/products";
 import { useStore } from "../context/StoreContext";
 import { Heart, Eye, ShoppingBag, ShieldCheck, Sparkles, Video, Send, MessageCircle } from "lucide-react";
@@ -34,14 +35,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         className="relative w-full aspect-square bg-[#F7F5F0] overflow-hidden cursor-pointer"
         onMouseEnter={() => product.images.length > 1 && setCurrentImgIndex(1)}
         onMouseLeave={() => setCurrentImgIndex(0)}
-        onClick={() => setQuickViewProduct(product)}
       >
-        {/* Product Image */}
-        <img
-          src={product.images[currentImgIndex] || product.images[0]}
-          alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-108"
-        />
+        {/* Product Image Link to Detail Page */}
+        <Link href={`/products/${product.id}`} className="block w-full h-full">
+          <img
+            src={product.images[currentImgIndex] || product.images[0]}
+            alt={product.name}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-108"
+          />
+        </Link>
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
@@ -111,12 +113,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {/* Product Title */}
-          <h4
-            onClick={() => setQuickViewProduct(product)}
-            className="font-serif font-bold text-stone-900 text-sm sm:text-base leading-snug line-clamp-2 hover:text-[#8F6D2C] transition-colors cursor-pointer"
-          >
-            {product.name}
-          </h4>
+          <Link href={`/products/${product.id}`} className="block">
+            <h4 className="font-serif font-bold text-stone-900 text-sm sm:text-base leading-snug line-clamp-2 hover:text-[#8F6D2C] transition-colors cursor-pointer">
+              {product.name}
+            </h4>
+          </Link>
 
           {/* Weight specs */}
           <div className="mt-2 text-xs text-stone-500 flex items-center space-x-2">
@@ -138,13 +139,22 @@ export default function ProductCard({ product }: ProductCardProps) {
               </p>
             </div>
 
-            {/* Price breakdown toggle */}
-            <button
-              onClick={() => setShowBreakdown(!showBreakdown)}
-              className="text-[10px] font-semibold text-[#8F6D2C] hover:underline"
-            >
-              Price Breakup ℹ
-            </button>
+            <div className="flex items-center space-x-3">
+              {/* Price breakdown toggle */}
+              <button
+                type="button"
+                onClick={() => setShowBreakdown(!showBreakdown)}
+                className="text-[10px] font-semibold text-[#8F6D2C] hover:underline"
+              >
+                Price Breakup ℹ
+              </button>
+              <Link
+                href={`/products/${product.id}`}
+                className="text-[10px] font-bold text-[#1A130B] hover:text-[#9E7B35] underline decoration-[#DFBA73] underline-offset-2"
+              >
+                Details →
+              </Link>
+            </div>
           </div>
 
           {/* Itemized price breakdown popover */}

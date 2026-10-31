@@ -238,6 +238,10 @@ export default function Footer() {
             <span>Terms of Billing</span>
             <span>•</span>
             <span>Exchange & Buyback Policy</span>
+            <span>•</span>
+            <a href="/admin/login" className="text-[#DFBA73] hover:underline font-medium flex items-center space-x-1">
+              <span>Admin Portal</span>
+            </a>
           </div>
         </div>
       </div>

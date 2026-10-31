@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useStore } from "../context/StoreContext";
 import { PRODUCTS } from "../data/products";
@@ -22,18 +23,17 @@ function LuxuryEmblemIcon() {
 }
 
 export default function LuxuryEditorialShowcase() {
+  const router = useRouter();
   const { setSelectedMetal, setEnquireProduct } = useStore();
 
   const handleEnquireGold = () => {
     setSelectedMetal("gold");
-    const goldProd = PRODUCTS.find((p) => p.metal === "gold") || PRODUCTS[0];
-    setEnquireProduct(goldProd);
+    router.push("/products?metal=gold");
   };
 
   const handleEnquireDiamond = () => {
     setSelectedMetal("diamond");
-    const diamondProd = PRODUCTS.find((p) => p.metal === "diamond") || PRODUCTS[1];
-    setEnquireProduct(diamondProd);
+    router.push("/products?metal=diamond");
   };
 
   return (
