@@ -117,6 +117,7 @@ export default function AdminDashboardPage() {
     deleteProduct,
     resetProductsToDefault,
     refreshProducts,
+    pushAllProductsToSupabase,
     isSupabaseReady,
     isLoadingProducts,
     isAdminAuthenticated,
@@ -865,6 +866,24 @@ export default function AdminDashboardPage() {
                     <option value="in-stock">In Stock Only</option>
                     <option value="out-of-stock">Out of Stock</option>
                   </select>
+
+                  {/* Push to Supabase Cloud Button */}
+                  <button
+                    onClick={async () => {
+                      if (
+                        confirm(
+                          "Sync all current jewellery creations & images to Supabase Cloud? This guarantees your live hosted website displays all real products and photos."
+                        )
+                      ) {
+                        await pushAllProductsToSupabase();
+                      }
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold transition flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+                    title="Upload local inventory to Supabase so it appears on hosted site"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Push to Supabase Cloud</span>
+                  </button>
 
                   {/* Reset to Default Button */}
                   <button

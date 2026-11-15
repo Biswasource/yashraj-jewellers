@@ -1,9 +1,11 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Product } from "../data/products";
 
-// Fallback placeholder credentials for initial build safety
-const DEFAULT_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const DEFAULT_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+// Default credentials (uses environment variables, or falls back to production keys for hosted builds)
+const DEFAULT_SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://juvobjjaqjjgppiinmyi.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_h9zgGeSkGNaqXO_dHDnieg_JkP6V29J";
 
 // Storage keys for browser-configured credentials
 const STORAGE_SUPABASE_URL_KEY = "yj_supabase_url";
@@ -123,9 +125,71 @@ export function productToDb(product: Product): Record<string, any> {
 }
 
 /**
+ * Safely parse product images regardless of how Supabase / PostgreSQL formats them
+ * (e.g. string[], Postgres array string '{url1,url2}', JSON string '["url"]', or single URL)
+ */
+export function parseProductImages(row: Record<string, any>): string[] {
+  const raw = row.images ?? row.image ?? row.image_url ?? row.img ?? row.photo;
+  if (!raw) return [];
+
+  // Case 1: Already an array
+  if (Array.isArray(raw)) {
+    const valid = raw
+      .map((item) => (typeof item === "string" ? item.trim() : String(item || "")))
+      .filter((url) => url && url.length > 0 && url !== "null" && url !== "undefined");
+    if (valid.length > 0) return valid;
+  }
+
+  // Case 2: String
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+
+    // JSON array: '["https://...", "https://..."]'
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          const valid = parsed
+            .map((item) => (typeof item === "string" ? item.trim() : String(item || "")))
+            .filter((url) => url && url.length > 0);
+          if (valid.length > 0) return valid;
+        }
+      } catch {}
+    }
+
+    // Postgres array literal: '{https://...,https://...}'
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      const inner = trimmed.slice(1, -1).trim();
+      if (inner) {
+        const valid = inner
+          .split(",")
+          .map((s) => s.replace(/^"|"$/g, "").replace(/^'|'$/g, "").trim())
+          .filter((url) => url && url.length > 0);
+        if (valid.length > 0) return valid;
+      }
+    }
+
+    // Single direct URL
+    if (
+      trimmed.startsWith("http://") ||
+      trimmed.startsWith("https://") ||
+      trimmed.startsWith("data:image/") ||
+      trimmed.startsWith("/")
+    ) {
+      return [trimmed];
+    }
+  }
+
+  return [];
+}
+
+/**
  * Convert database row to frontend Product (camelCase)
  */
 export function dbToProduct(row: Record<string, any>): Product {
+  const parsedImgs = parseProductImages(row);
+
   return {
     id: String(row.id),
     name: String(row.name || "Untitled Creation"),
@@ -147,10 +211,15 @@ export function dbToProduct(row: Record<string, any>): Product {
     reviewsCount: Number(row.reviews_count || 1),
     inStock: Boolean(row.in_stock ?? true),
     description: String(row.description || ""),
-    images: Array.isArray(row.images) && row.images.length > 0
-      ? row.images
-      : ["https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80"],
-    descriptionImage: row.description_image ? String(row.description_image) : undefined,
+    images:
+      parsedImgs.length > 0
+        ? parsedImgs
+        : ["https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80"],
+    descriptionImage: row.description_image
+      ? String(row.description_image)
+      : row.descriptionImage
+      ? String(row.descriptionImage)
+      : undefined,
     certification: String(row.certification || "Certified Authentic"),
   };
 }

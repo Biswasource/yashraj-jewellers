@@ -11,10 +11,10 @@ export interface CloudinaryConfig {
 const STORAGE_KEY_CLOUD_NAME = "yj_cloudinary_cloud_name";
 const STORAGE_KEY_PRESET = "yj_cloudinary_upload_preset";
 
-// Default fallback configuration (can be customized in Admin > Cloudinary Settings)
+// Default fallback configuration (uses env vars, or falls back to production config for hosted builds)
 export const DEFAULT_CLOUDINARY_CONFIG: CloudinaryConfig = {
-  cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "",
-  uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "",
+  cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "de5yiplsh",
+  uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "ml_default",
 };
 
 export function getCloudinaryConfig(): CloudinaryConfig {

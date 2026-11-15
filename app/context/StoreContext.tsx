@@ -51,6 +51,7 @@ interface StoreContextType {
   deleteProduct: (id: string) => Promise<void>;
   resetProductsToDefault: () => void;
   refreshProducts: () => Promise<void>;
+  pushAllProductsToSupabase: () => Promise<void>;
   getProduct: (id: string) => Product | undefined;
   isSupabaseReady: boolean;
   isLoadingProducts: boolean;
@@ -340,6 +341,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     showToast("Products synchronized with Supabase database.");
   };
 
+  const pushAllProductsToSupabase = async () => {
+    if (!isSupabaseConfigured()) {
+      showToast("Supabase is not configured.");
+      return;
+    }
+    const targetProducts = products.length > 0 ? products : PRODUCTS;
+    showToast(`Uploading ${targetProducts.length} creations to Supabase cloud...`);
+    let count = 0;
+    for (const prod of targetProducts) {
+      const ok = await saveProductToSupabase(prod);
+      if (ok) count++;
+    }
+    showToast(`Synced ${count} of ${targetProducts.length} creations to Supabase! Visible on all hosted devices.`);
+  };
+
   const resetProductsToDefault = () => {
     setProducts(PRODUCTS);
     try {
@@ -427,6 +443,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         deleteProduct,
         resetProductsToDefault,
         refreshProducts,
+        pushAllProductsToSupabase,
         getProduct,
         isSupabaseReady,
         isLoadingProducts,
