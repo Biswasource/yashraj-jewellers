@@ -7,26 +7,25 @@ import { useStore } from "../../context/StoreContext";
 import ProductCard from "../../components/ProductCard";
 import {
   Heart,
-  ShoppingBag,
-  CheckCircle2,
-  RotateCcw,
-  Sparkles,
   Share2,
-  Send,
-  MessageCircle,
+  Copy,
+  Check,
+  CheckCircle2,
   Star,
   ChevronRight,
+  Send,
+  MessageCircle,
+  ShieldCheck,
   Info,
-  Calendar,
-  Gem,
-  Check,
-  Scale,
-  Award,
-  ArrowRight,
+  Sparkles,
   PhoneCall,
   Clock,
-  Eye,
-  TrendingUp,
+  ArrowRight,
+  X,
+  FileText,
+  Truck,
+  RotateCcw,
+  Gem,
 } from "lucide-react";
 
 interface ProductDetailClientProps {
@@ -34,11 +33,13 @@ interface ProductDetailClientProps {
   productId?: string;
 }
 
-export default function ProductDetailClient({ product: initialProduct, productId }: ProductDetailClientProps) {
+export default function ProductDetailClient({
+  product: initialProduct,
+  productId,
+}: ProductDetailClientProps) {
   const {
     products,
     getProduct,
-    addToCart,
     addToWishlist,
     isInWishlist,
     setEnquireProduct,
@@ -48,12 +49,44 @@ export default function ProductDetailClient({ product: initialProduct, productId
   const lookupId = productId || initialProduct?.id;
   const product = (lookupId ? getProduct(lookupId) : undefined) || initialProduct;
 
+  const [mounted, setMounted] = useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [activeImgIndex, setActiveImgIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<"specifications" | "price" | "karigari" | "care" | "reviews">("specifications");
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [openPolicyModal, setOpenPolicyModal] = useState<"why" | "policy" | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Accordion state matching Lalchnd
+  const [accordionState, setAccordionState] = useState<{
+    description: boolean;
+    specification: boolean;
+    metals: boolean;
+  }>({
+    description: true,
+    specification: true,
+    metals: true,
+  });
+
+  const toggleAccordion = (key: "description" | "specification" | "metals") => {
+    setAccordionState((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  if (!product && !mounted) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-32 flex flex-col items-center justify-center space-y-3">
+        <div className="w-9 h-9 border-2 border-[#C5A059] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-stone-400 font-mono">Loading creation details...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-20 text-center space-y-5">
+      <div className="max-w-3xl mx-auto px-4 py-24 text-center space-y-5">
         <div className="w-20 h-20 mx-auto rounded-full bg-[#FAF3E0] border border-[#DEC9A2] flex items-center justify-center text-[#8F6D2C]">
           <Gem className="w-10 h-10" />
         </div>
@@ -61,7 +94,7 @@ export default function ProductDetailClient({ product: initialProduct, productId
           Jewellery Piece Not Found
         </h1>
         <p className="text-sm text-stone-600 max-w-md mx-auto">
-          The creation you are looking for is currently unavailable in the showroom catalogue or may have been purchased by a collector.
+          The creation you are looking for is currently unavailable in the showroom catalogue or may have been custom crafted.
         </p>
         <div className="pt-4 flex justify-center gap-3">
           <Link
@@ -79,589 +112,672 @@ export default function ProductDetailClient({ product: initialProduct, productId
   const isWish = isInWishlist(product.id);
   const related = getRelatedProducts(product, 4, products);
 
-  const discountPercent = Math.round(
-    ((product.originalPrice - product.price) / product.originalPrice) * 100
-  );
+  // Formatted price with 2 decimals
+  const formattedPrice = product.price.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
-  const handleShare = () => {
-    if (typeof navigator !== "undefined" && navigator.share) {
-      navigator.share({
-        title: product.name,
-        text: `Check out ${product.name} at Yashraj Jewellers!`,
-        url: window.location.href,
-      });
-    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      showToast("Product link copied to clipboard!");
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(product.code);
+      setCopiedCode(true);
+      showToast("Product code copied!");
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      showToast("Product code: " + product.code);
     }
   };
 
-  const whatsappMessage = encodeURIComponent(
-    `Hello Yashraj Jewellers, I would like to enquire about this piece:
-*${product.name}*
-SKU: ${product.code}
-Price Quoted: ₹${product.price.toLocaleString("en-IN")}
-Purity: ${product.purity}
-Weight: ${product.grossWeight}g
-URL: ${typeof window !== "undefined" ? window.location.href : `https://yashrajjewellers.in/products/${product.id}`}
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      showToast("Product link copied!");
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      showToast("Link copied to clipboard!");
+    }
+  };
 
-Please share more high-definition photos and showroom availability.`
-  );
+  const handleScrollToInfo = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const el = document.getElementById("additional-information");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 lg:py-10">
-      {/* 1. BREADCRUMBS */}
-      <nav className="flex items-center space-x-2 text-xs text-stone-500 mb-6 font-medium">
-        <Link href="/" className="hover:text-stone-900 transition-colors">
-          Home
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-[#C5A059]" />
-        <Link href="/products" className="hover:text-stone-900 transition-colors">
-          Jewellery
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-[#C5A059]" />
-        <Link
-          href={`/products?category=${product.category}`}
-          className="hover:text-stone-900 transition-colors capitalize"
-        >
-          {product.category}
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-[#C5A059]" />
-        <span className="text-stone-900 font-bold truncate max-w-xs">{product.name}</span>
-      </nav>
+    <div className="bg-white min-h-screen">
+      {/* 1. TOP MAIN PRODUCT SECTION (COMPACT LALCHND LAYOUT) */}
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-6 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+          {/* LEFT: GALLERY (COMPACT 5 COLUMNS) */}
+          <div className="lg:col-span-5 space-y-3">
+            <div className="sticky top-24 space-y-3">
+              {/* Main Stage Image (Pure image, no border, no background color) */}
+              <div className="relative aspect-square w-full max-w-[340px] sm:max-w-[360px] mx-auto overflow-hidden flex items-center justify-center group">
+                <img
+                  src={product.images[activeImgIndex] || product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                />
 
-      {/* 2. MAIN PRODUCT HERO: GALLERY (LEFT) + DETAILS (RIGHT) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-        {/* LEFT COLUMN: MULTI-IMAGE GALLERY (5 COLS) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="sticky top-24">
-            {/* Main Stage Image */}
-            <div className="relative aspect-square w-full rounded-3xl bg-[#FAF9F5] border border-[#E8DFC8] overflow-hidden shadow-md group">
-              <img
-                src={product.images[activeImgIndex] || product.images[0]}
-                alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-108 cursor-zoom-in"
-              />
-
-              {/* Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                {product.tag && (
-                  <span className="text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-[#1A130B]/90 text-[#F5E8CB] border border-[#C5A059]/50 shadow-md backdrop-blur-xs flex items-center space-x-1">
-                    <Sparkles className="w-3.5 h-3.5 text-[#DFBA73]" />
-                    <span>{product.tag}</span>
-                  </span>
-                )}
-                {discountPercent > 0 && (
-                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-rose-600 text-white w-max shadow-sm">
-                    Save {discountPercent}% Special
-                  </span>
-                )}
-              </div>
-
-              {/* Wishlist & Share Float */}
-              <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+                {/* Wishlist Heart */}
                 <button
                   onClick={() => addToWishlist(product)}
-                  className={`p-2.5 rounded-full shadow-md backdrop-blur-xs transition-transform duration-200 cursor-pointer ${
+                  className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all duration-200 cursor-pointer ${
                     isWish
-                      ? "bg-rose-50 text-rose-600 scale-110"
-                      : "bg-white/90 hover:bg-white text-stone-700 hover:text-rose-600"
+                      ? "bg-white text-rose-600 shadow-sm scale-105"
+                      : "bg-white/80 hover:bg-white text-stone-600 hover:text-rose-600 shadow-xs"
                   }`}
-                  aria-label="Wishlist"
+                  aria-label="Add to Wishlist"
                 >
-                  <Heart className={`w-5 h-5 ${isWish ? "fill-rose-600" : ""}`} />
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="p-2.5 rounded-full bg-white/90 hover:bg-white text-stone-700 hover:text-stone-900 shadow-md backdrop-blur-xs transition cursor-pointer"
-                  title="Share Product"
-                >
-                  <Share2 className="w-5 h-5" />
+                  <Heart className={`w-4 h-4 ${isWish ? "fill-rose-600 text-rose-600" : ""}`} />
                 </button>
               </div>
-            </div>
 
-            {/* Thumbnail Strip */}
-            {product.images.length > 1 && (
-              <div className="flex items-center space-x-3 mt-4 overflow-x-auto pb-1">
-                {product.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImgIndex(idx)}
-                    className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
-                      activeImgIndex === idx
-                        ? "border-[#8F6D2C] ring-2 ring-[#DFBA73]/40 scale-105"
-                        : "border-[#E8DFC8] opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: SPECS, PRICING & ACTIONS (7 COLS) */}
-        <div className="lg:col-span-7 space-y-4">
-          {/* Header & Title */}
-          <div>
-            <div className="flex items-center space-x-2 text-[11px] text-[#8F6D2C] mb-1.5 font-medium">
-              <span className="uppercase tracking-wider">{product.metal} Jewellery</span>
-              <span>•</span>
-              <span className="font-mono text-stone-400">SKU: {product.code}</span>
-            </div>
-            <h1 className="font-serif text-xl sm:text-2xl lg:text-3xl font-semibold text-stone-900 leading-snug">
-              {product.name}
-            </h1>
-
-            {/* Rating */}
-            <div className="mt-2.5 flex items-center gap-2 text-xs text-stone-600">
-              <div className="flex items-center space-x-1 bg-[#FAF3E0] px-2 py-0.5 rounded-full border border-[#DEC9A2]">
-                <div className="flex text-amber-500">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-3 h-3 ${
-                        i < Math.floor(product.rating) ? "fill-amber-400" : "text-stone-300"
+              {/* Thumbnails Strip (No border, no background color) */}
+              {product.images.length > 1 && (
+                <div className="flex items-center justify-center space-x-2.5 overflow-x-auto pb-1 scrollbar-thin">
+                  {product.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImgIndex(idx)}
+                      className={`relative w-14 h-14 overflow-hidden shrink-0 transition-all cursor-pointer ${
+                        activeImgIndex === idx
+                          ? "ring-2 ring-[#C5A059] opacity-100"
+                          : "opacity-60 hover:opacity-100"
                       }`}
-                    />
+                    >
+                      <img src={img} alt="" className="w-full h-full object-contain" />
+                    </button>
                   ))}
                 </div>
-                <span className="font-bold text-stone-900 font-mono text-[11px] ml-0.5">{product.rating}</span>
-                <span className="text-stone-500 text-[11px]">({product.reviewsCount} reviews)</span>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Pricing Box */}
-          <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E8DFC8] space-y-2.5">
-            <div className="flex items-baseline justify-between">
-              <div>
-                <p className="text-[11px] text-stone-500 uppercase tracking-wider font-medium">
-                  Wholesale Net Price (Incl. GST)
-                </p>
-                <div className="flex items-baseline space-x-2.5 mt-0.5">
-                  <span className="text-2xl sm:text-3xl font-bold font-mono text-stone-900">
-                    ₹{product.price.toLocaleString("en-IN")}
-                  </span>
-                  <span className="text-xs sm:text-sm text-stone-400 line-through">
-                    ₹{product.originalPrice.toLocaleString("en-IN")}
-                  </span>
-                  {discountPercent > 0 && (
-                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                      Save ₹{(product.originalPrice - product.price).toLocaleString("en-IN")}
-                    </span>
-                  )}
-                </div>
-              </div>
+          {/* RIGHT: PRODUCT INFO & ACTIONS (7 COLUMNS - COMPACT FONTS & SPACING) */}
+          <div className="lg:col-span-7 space-y-3 text-stone-900">
+            {/* Breadcrumb */}
+            <nav className="flex items-center space-x-1.5 text-[11px] text-stone-500 font-medium">
+              <Link href="/" className="hover:text-stone-900 transition-colors">
+                Home
+              </Link>
+              <span>/</span>
+              <Link href="/products" className="hover:text-stone-900 transition-colors">
+                Products
+              </Link>
+              <span>/</span>
+              <span className="text-stone-900 font-normal truncate max-w-xs">{product.name}</span>
+            </nav>
 
-              {/* In stock badge */}
-              <div className="text-right">
-                <span className="inline-flex items-center space-x-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                  <span>In Stock</span>
-                </span>
+            {/* Rating Stars */}
+            <div className="flex items-center space-x-1.5 pt-0.5">
+              <div className="flex text-[#C9A227] space-x-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-3.5 h-3.5 fill-[#C9A227] text-[#C9A227]" />
+                ))}
               </div>
-            </div>
-
-            {/* Quick Live Rate Context */}
-            <div className="text-[11px] text-stone-500 flex items-center space-x-1.5 pt-2 border-t border-[#F0E6D2]">
-              <TrendingUp className="w-3.5 h-3.5 text-[#8F6D2C]" />
-              <span>
-                Live bullion: <strong>22K @ ₹{LIVE_RATES.gold22k}/g</strong> • Transparent minimal karigari charges.
+              <span className="text-[11px] text-stone-500 font-medium">
+                (4.9/5 • {product.reviewsCount || 18} Reviews)
               </span>
             </div>
-          </div>
 
-          {/* ACTION BUTTONS: WhatsApp + Bag + Enquire */}
-          <div className="space-y-2.5 pt-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* WhatsApp Primary Consultation CTA */}
-              <a
-                href={`https://wa.me/917008343796?text=${whatsappMessage}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-wider shadow-xs hover:shadow transition-all flex items-center justify-center space-x-2 text-center"
-              >
-                <MessageCircle className="w-4 h-4 fill-white text-emerald-600" />
-                <span>Instant WhatsApp Enquiry</span>
-              </a>
+            {/* Title & Share Row */}
+            <div className="flex items-start justify-between gap-3 pt-0.5 border-b border-[#F0EAE1] pb-2.5">
+              <h1 className="font-serif text-lg sm:text-xl md:text-2xl text-stone-900 font-normal leading-snug">
+                {product.name}
+              </h1>
 
-              {/* Add to Enquiry Bag */}
+              {/* Share Button Trigger */}
               <button
-                onClick={() => addToCart(product)}
-                className="py-3 px-4 rounded-xl bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-stone-950 font-semibold text-xs uppercase tracking-wider shadow-xs hover:shadow hover:brightness-105 transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#FAF9F5] hover:bg-[#FAF3E0] border border-[#DEC9A2] text-stone-700 hover:text-[#8F6D2C] transition-all cursor-pointer shadow-2xs group shrink-0"
+                aria-label="Share this jewellery creation"
+                title="Share on WhatsApp, Facebook, X, Instagram"
               >
-                <ShoppingBag className="w-4 h-4" />
-                <span>Add to Enquiry Bag</span>
+                <Share2 className="w-3.5 h-3.5 text-[#8F6D2C] group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold">Share</span>
               </button>
             </div>
 
-            {/* Secondary: Formal Custom Quote / Schedule Visit */}
-            <div className="flex space-x-2.5">
-              <button
-                onClick={() => setEnquireProduct(product)}
-                className="flex-1 py-2.5 rounded-xl bg-white hover:bg-[#FAF3E0] text-[#7A5B1F] border border-[#DEC9A2] font-semibold text-xs uppercase tracking-wider transition flex items-center justify-center space-x-1.5 shadow-2xs"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Request Official Price Quotation</span>
-              </button>
-              <button
-                onClick={() => addToWishlist(product)}
-                className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-stone-700 hover:text-rose-600 border border-stone-200 transition flex items-center space-x-1.5 shadow-2xs text-xs font-medium"
-              >
-                <Heart className={`w-3.5 h-3.5 ${isWish ? "fill-rose-600 text-rose-600" : ""}`} />
-                <span>{isWish ? "Saved" : "Wishlist"}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. DETAILED INFORMATION TABS */}
-      <section className="mt-14 pt-8 border-t border-[#E8DFC8]">
-        {/* Tab Headers */}
-        <div className="flex items-center space-x-2 border-b border-[#DEC9A2] overflow-x-auto pb-1 scrollbar-none">
-          {[
-            { id: "specifications", label: "Full Specifications" },
-            { id: "price", label: "Transparent Price Breakup" },
-            { id: "karigari", label: "Artisanal Karigari Story" },
-            { id: "care", label: "Gold & Diamond Care" },
-            { id: "reviews", label: `Customer Reviews (${product.reviewsCount})` },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2.5 text-xs font-serif font-semibold tracking-wide whitespace-nowrap transition-all border-b-2 cursor-pointer ${
-                activeTab === tab.id
-                  ? "border-[#8F6D2C] text-[#8F6D2C] bg-[#FAF3E0]/50 rounded-t-lg"
-                  : "border-transparent text-stone-500 hover:text-stone-900"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content Panels */}
-        <div className="py-6">
-          {/* TAB 1: SPECIFICATIONS */}
-          {activeTab === "specifications" && (
-            <div className="bg-white rounded-3xl border border-[#E8DFC8] p-6 sm:p-8 shadow-xs space-y-6 animate-fade-in">
-              <h3 className="font-serif font-semibold text-lg text-stone-900">
-                Detailed Product Specifications
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-xs sm:text-sm text-stone-700">
-                <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                  <span className="text-stone-500">Product Name:</span>
-                  <span className="font-semibold text-stone-900">{product.name}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                  <span className="text-stone-500">Unique Hallmark Code:</span>
-                  <span className="font-mono font-bold text-stone-900">{product.code}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                  <span className="text-stone-500">Metal &amp; Alloy:</span>
-                  <span className="font-semibold text-stone-900 capitalize">{product.metal}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                  <span className="text-stone-500">Purity Standard:</span>
-                  <span className="font-bold text-[#8F6D2C]">{product.purity}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                  <span className="text-stone-500">Gross Weight:</span>
-                  <span className="font-mono font-bold text-stone-900">{product.grossWeight} grams</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                  <span className="text-stone-500">Net Pure Metal Weight:</span>
-                  <span className="font-mono font-bold text-stone-900">{product.netGoldWeight} grams</span>
-                </div>
-                {product.stoneWeight && (
-                  <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                    <span className="text-stone-500">Stone / Diamond Specs:</span>
-                    <span className="font-semibold text-stone-900">{product.stoneWeight}</span>
-                  </div>
-                )}
-                <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                  <span className="text-stone-500">Occasion &amp; Wearability:</span>
-                  <span className="font-semibold text-stone-900 capitalize">{product.occasion}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-[#F2ECE1]">
-                  <span className="text-stone-500">Gender / Fit:</span>
-                  <span className="font-semibold text-stone-900 capitalize">{product.gender}</span>
-                </div>
+            {/* Product Code & In Stock Row */}
+            <div className="flex items-center space-x-3 text-[11px]">
+              <div className="flex items-center space-x-1.5">
+                <span className="font-mono text-stone-500 font-semibold">{product.code}</span>
+                <button
+                  onClick={handleCopyCode}
+                  className="text-stone-400 hover:text-stone-700 transition cursor-pointer p-0.5"
+                  title="Copy product code"
+                >
+                  {copiedCode ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                </button>
               </div>
-
-              <div className="pt-4 border-t border-[#F2ECE1] text-xs text-stone-600 leading-relaxed">
-                <p><strong>Artisan Description:</strong> {product.description}</p>
+              <span className="text-stone-300">•</span>
+              <div className="flex items-center space-x-1 text-[#198754] font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>In Stock</span>
               </div>
             </div>
-          )}
 
-          {/* TAB 2: PRICE BREAKUP */}
-          {activeTab === "price" && (
-            <div className="bg-white rounded-3xl border border-[#E8DFC8] p-6 sm:p-8 shadow-xs space-y-6 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h3 className="font-serif font-bold text-xl text-stone-900">
-                    Transparent Itemized Billing
-                  </h3>
-                  <p className="text-xs text-stone-500">
-                    Unlike traditional retail jewelers with hidden wastage margins, Yashraj guarantees 100% itemized transparency.
-                  </p>
-                </div>
-                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full w-max">
-                  Zero Hidden Melting Margin
+            {/* Product Description line */}
+            <p className="text-xs text-stone-600 leading-relaxed font-light">
+              {product.description ||
+                `Adorn yourself with the traditional charm of ${product.name}. Crafted in radiant 22K pure hallmarked gold with intricate hand-carved detailing.`}
+            </p>
+
+            {/* Purity, Color & Gross Weight Highlight */}
+            <div className="pt-0.5">
+              <p className="text-xs sm:text-[13px] font-semibold tracking-wide" style={{ color: "#e4562e" }}>
+                {product.purity} Golden &nbsp;|&nbsp; {product.grossWeight} gm Gross wt.
+              </p>
+            </div>
+
+            {/* Price Box */}
+            <div className="pt-1.5 pb-0.5 space-y-0.5">
+              <div className="flex items-baseline space-x-2">
+                <span className="text-2xl sm:text-[28px] font-bold font-serif text-stone-900 tracking-tight">
+                  ₹{formattedPrice}
                 </span>
               </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs sm:text-sm text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#FAF3E0] text-[#7A5B1F] border-b border-[#DEC9A2]">
-                      <th className="py-3 px-4 font-bold">Billing Component</th>
-                      <th className="py-3 px-4 font-bold">Weight / Carats</th>
-                      <th className="py-3 px-4 font-bold">Rate</th>
-                      <th className="py-3 px-4 font-bold text-right">Amount (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#F2ECE1] text-stone-700">
-                    <tr>
-                      <td className="py-3.5 px-4 font-semibold text-stone-900">
-                        Pure Gold Value ({product.purity})
-                      </td>
-                      <td className="py-3.5 px-4 font-mono">{product.netGoldWeight}g</td>
-                      <td className="py-3.5 px-4 font-mono">₹{LIVE_RATES.gold22k}/g</td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-right text-stone-900">
-                        ₹{(product.price - product.makingCharges - product.gst).toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    {product.stoneWeight && (
-                      <tr>
-                        <td className="py-3.5 px-4 font-semibold text-stone-900">
-                          Precious Stones / Certified Diamonds
-                        </td>
-                        <td className="py-3.5 px-4">{product.stoneWeight}</td>
-                        <td className="py-3.5 px-4">Direct Assayed</td>
-                        <td className="py-3.5 px-4 font-mono font-bold text-right text-stone-900">
-                          Included in quoted price
-                        </td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="py-3.5 px-4 font-semibold text-stone-900">
-                        Making &amp; Karigari Charges
-                      </td>
-                      <td className="py-3.5 px-4">—</td>
-                      <td className="py-3.5 px-4 font-mono">Special Wholesale Rate</td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-right text-stone-900">
-                        ₹{product.makingCharges.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 px-4 font-semibold text-stone-900">
-                        Government GST (3%)
-                      </td>
-                      <td className="py-3.5 px-4">—</td>
-                      <td className="py-3.5 px-4 font-mono">3.00% Statutory</td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-right text-stone-900">
-                        ₹{product.gst.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    <tr className="bg-[#FAF9F5] font-bold text-stone-950 text-base">
-                      <td className="py-4 px-4 font-serif text-[#8F6D2C]" colSpan={3}>
-                        Grand Total Final Transparent Price:
-                      </td>
-                      <td className="py-4 px-4 font-mono text-right text-[#8F6D2C]">
-                        ₹{product.price.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: KARIGARI STORY */}
-          {activeTab === "karigari" && (
-            <div className="bg-white rounded-3xl border border-[#E8DFC8] p-6 sm:p-8 shadow-xs space-y-4 animate-fade-in text-xs sm:text-sm text-stone-700 leading-relaxed">
-              <h3 className="font-serif font-bold text-xl text-stone-900">
-                The Heritage Karigari &amp; Craftsmanship
-              </h3>
-              <p>
-                Each creation from Yashraj Jewellers carries forward over 40 years of Odisha artisanal mastery. Our master goldsmiths in Bhubaneswar and Cuttack spend countless hours twisting, engraving, and polishing each ornament to timeless perfection.
+              <p className="text-[10px] sm:text-[11px] text-stone-400 leading-snug">
+                * Approximate (excluding taxes, GST and stone charges)
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E8DFC8] space-y-1.5">
-                  <span className="font-serif font-bold text-[#8F6D2C] text-sm">
-                    1. Sacred Handcrafting
-                  </span>
-                  <p className="text-[11px] text-stone-600">
-                    Motifs inspired by Jagannath Temple architecture, Mayura plumes, and antique Vivaha patterns.
-                  </p>
-                </div>
-                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E8DFC8] space-y-1.5">
-                  <span className="font-serif font-bold text-[#8F6D2C] text-sm">
-                    2. HUID Laser Assay
-                  </span>
-                  <p className="text-[11px] text-stone-600">
-                    Laser etched with Govt. Bureau of Indian Standards HUID guarantee card.
-                  </p>
-                </div>
-                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E8DFC8] space-y-1.5">
-                  <span className="font-serif font-bold text-[#8F6D2C] text-sm">
-                    3. Anti-Tarnish Finish
-                  </span>
-                  <p className="text-[11px] text-stone-600">
-                    Dual micro-layer protective coating preventing daily oxidation while maintaining natural gold glow.
-                  </p>
-                </div>
-              </div>
+              <p className="text-[10px] sm:text-[11px] text-stone-400 leading-snug">
+                * Prices may vary with market fluctuations. Please visit our store for the latest pricing.
+              </p>
             </div>
-          )}
 
-          {/* TAB 4: GOLD CARE */}
-          {activeTab === "care" && (
-            <div className="bg-white rounded-3xl border border-[#E8DFC8] p-6 sm:p-8 shadow-xs space-y-4 animate-fade-in text-xs sm:text-sm text-stone-700 leading-relaxed">
-              <h3 className="font-serif font-bold text-xl text-stone-900">
-                How to Preserve &amp; Care for Your Fine Jewellery
-              </h3>
-              <ul className="space-y-3">
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#8F6D2C] shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Avoid Direct Perfumes:</strong> Spray hairspray and perfumes before putting on your gold and diamond ornaments to prevent chemical residue.
-                  </span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#8F6D2C] shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Complimentary Ultrasonic Cleaning:</strong> Bring your Yashraj ornaments to any of our 6 showrooms in Bhubaneswar, Cuttack, or Delhi anytime for complimentary ultrasonic spa cleaning.
-                  </span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#8F6D2C] shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Storage:</strong> Store individual items in their original silk velvet Yashraj pouches to avoid interlocking scratches.
-                  </span>
-                </li>
-              </ul>
+            {/* Action Buttons: View More + Enquire Now */}
+            <div className="pt-3 flex flex-col sm:flex-row gap-2.5">
+              <button
+                onClick={handleScrollToInfo}
+                className="flex-1 py-2.5 px-5 rounded-lg border border-stone-800 text-stone-900 hover:bg-stone-900 hover:text-white font-semibold text-xs uppercase tracking-wider transition-all duration-200 text-center cursor-pointer"
+              >
+                View More
+              </button>
+              <button
+                onClick={() => setEnquireProduct(product)}
+                className="flex-1 py-2.5 px-5 rounded-lg bg-[#093B2A] hover:bg-[#124831] text-white font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow transition-all duration-200 flex items-center justify-center space-x-1.5 cursor-pointer"
+              >
+                <Send className="w-3 h-3" />
+                <span>Enquire Now</span>
+              </button>
             </div>
-          )}
 
-          {/* TAB 5: REVIEWS */}
-          {activeTab === "reviews" && (
-            <div className="bg-white rounded-3xl border border-[#E8DFC8] p-6 sm:p-8 shadow-xs space-y-6 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[#F2ECE1] gap-4">
-                <div className="flex items-center space-x-4">
-                  <div className="text-center">
-                    <p className="font-serif text-4xl font-bold text-stone-900">
-                      {product.rating}
-                    </p>
-                    <div className="flex text-amber-500 justify-center my-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
-                      ))}
-                    </div>
-                    <p className="text-[11px] text-stone-500 font-mono">
-                      {product.reviewsCount} verified reviews
-                    </p>
-                  </div>
-                  <div className="h-12 w-px bg-stone-200 hidden sm:block" />
-                  <p className="text-xs text-stone-600 max-w-sm">
-                    100% of customers recommend Yashraj Jewellers for purity transparency and heirloom craftsmanship.
-                  </p>
-                </div>
-                <a
-                  href={`https://wa.me/917008343796?text=${encodeURIComponent(
-                    `Hello Yashraj Jewellers, I would like to submit a customer review or photo for: ${product.name} (${product.code}).`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-[#8F6D2C] text-white font-bold text-xs uppercase tracking-wider transition text-center shadow-xs"
-                >
-                  Write a Verified Review
-                </a>
-              </div>
-
-              {/* Sample Verified Reviews */}
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E8DFC8] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-serif font-bold text-stone-900 text-sm">
-                        Satyabrata Pattnaik
-                      </p>
-                      <p className="text-[10px] text-stone-400">
-                        Purchased at Master Canteen Flagship • Verified Buyer
-                      </p>
-                    </div>
-                    <div className="flex text-amber-500">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-xs text-stone-700 leading-relaxed">
-                    &ldquo;The finish is magnificent. Checked the HUID hallmark number on the BIS Care app and it immediately verified the exact 22KT purity and Yashraj jeweler registry. The weight was exact down to the milligram.&rdquo;
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E8DFC8] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-serif font-bold text-stone-900 text-sm">
-                        Ritu &amp; Ashish Singhania
-                      </p>
-                      <p className="text-[10px] text-stone-400">
-                        Online Order Delivered to New Delhi • Insured Transit
-                      </p>
-                    </div>
-                    <div className="flex text-amber-500">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-xs text-stone-700 leading-relaxed">
-                    &ldquo;Arrived in Delhi within 48 hours via BlueDart armored service. The tamper-evident packaging and silk-lined box made unboxing feel like a true royal celebration. Unbelievable price compared to Delhi retail showrooms!&rdquo;
-                  </p>
-                </div>
-              </div>
+            {/* Extra Policy Links Strip */}
+            <div className="pt-3 border-t border-[#F0EAE1] flex items-center space-x-5 text-[11px] text-stone-600">
+              <button
+                onClick={() => setOpenPolicyModal("why")}
+                className="flex items-center space-x-1 hover:text-[#8F6D2C] transition-colors cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#8F6D2C]" />
+                <span className="font-semibold underline">Why Choose Yashraj</span>
+              </button>
+              <button
+                onClick={() => setOpenPolicyModal("policy")}
+                className="flex items-center space-x-1 hover:text-[#8F6D2C] transition-colors cursor-pointer"
+              >
+                <Truck className="w-3.5 h-3.5 text-[#8F6D2C]" />
+                <span className="font-semibold underline">Yashraj Policy</span>
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </section>
 
-      {/* 4. RELATED / MATCHING HERITAGE JEWELLERY */}
+      {/* 2. ADDITIONAL INFORMATION SECTION (#additional-information) */}
+      <section id="additional-information" className="border-t border-[#E8DFC8] bg-white py-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+            {/* Left: Editorial / Model Photography (Compact, pure image, no border, no background color) */}
+            <div className="lg:col-span-5 flex justify-center">
+              <div className="overflow-hidden aspect-square w-full max-w-[280px] sm:max-w-[320px] flex items-center justify-center">
+                <img
+                  src={product.descriptionImage || product.images[1] || product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-contain hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+            </div>
+
+            {/* Right: Title & Accordions */}
+            <div className="lg:col-span-7 space-y-4">
+              <h2 className="font-serif text-xl sm:text-2xl text-stone-900 font-normal">
+                {product.name}
+              </h2>
+
+              <div className="divide-y divide-[#EAE2D2] border-y border-[#EAE2D2]">
+                {/* ACCORDION 1: Product Description */}
+                <div className="py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion("description")}
+                    className="w-full flex items-center justify-between text-left text-xs sm:text-sm font-serif font-semibold text-stone-900 hover:text-[#8F6D2C] transition cursor-pointer"
+                  >
+                    <span>Product Description</span>
+                    <span className="text-lg font-mono text-stone-500">
+                      {accordionState.description ? "−" : "+"}
+                    </span>
+                  </button>
+                  {accordionState.description && (
+                    <div className="pt-2 text-xs text-stone-600 leading-relaxed space-y-1.5 animate-fade-in font-light">
+                      <p>
+                        {product.description ||
+                          `Inspired by timeless temple architecture and traditional Odia karigari, this piece reflects heritage charm and fine craftsmanship. Every contour is delicately polished to preserve natural brilliance.`}
+                      </p>
+                      <p>
+                        Manufactured and certified under strict Bureau of Indian Standards (BIS) hallmarking guidelines with unique laser HUID identification.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* ACCORDION 2: Product Specification */}
+                <div className="py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion("specification")}
+                    className="w-full flex items-center justify-between text-left text-xs sm:text-sm font-serif font-semibold text-stone-900 hover:text-[#8F6D2C] transition cursor-pointer"
+                  >
+                    <span>Product Specification</span>
+                    <span className="text-lg font-mono text-stone-500">
+                      {accordionState.specification ? "−" : "+"}
+                    </span>
+                  </button>
+                  {accordionState.specification && (
+                    <div className="pt-2 overflow-x-auto animate-fade-in">
+                      <table className="w-full text-xs text-left border-collapse">
+                        <tbody className="divide-y divide-[#F2ECE1] text-stone-700">
+                          <tr className="hover:bg-[#FAF9F5]">
+                            <td className="py-2 px-3 text-stone-500 font-medium w-1/3">Color</td>
+                            <td className="py-2 px-3 font-semibold text-stone-900">Golden</td>
+                          </tr>
+                          <tr className="hover:bg-[#FAF9F5]">
+                            <td className="py-2 px-3 text-stone-500 font-medium">Size</td>
+                            <td className="py-2 px-3 font-semibold text-stone-900">
+                              {product.dimensions || "Free Size Standard"}
+                            </td>
+                          </tr>
+                          <tr className="hover:bg-[#FAF9F5]">
+                            <td className="py-2 px-3 text-stone-500 font-medium">Gender</td>
+                            <td className="py-2 px-3 font-semibold text-stone-900 capitalize">
+                              {product.gender === "women" ? "Female" : product.gender}
+                            </td>
+                          </tr>
+                          <tr className="hover:bg-[#FAF9F5]">
+                            <td className="py-2 px-3 text-stone-500 font-medium">Occasion</td>
+                            <td className="py-2 px-3 font-semibold text-stone-900 capitalize">
+                              {product.occasion === "wedding" ? "Vivaha Bridal" : product.occasion}
+                            </td>
+                          </tr>
+                          <tr className="hover:bg-[#FAF9F5]">
+                            <td className="py-2 px-3 text-stone-500 font-medium">Product Code</td>
+                            <td className="py-2 px-3 font-mono font-bold text-stone-900">
+                              {product.code}
+                            </td>
+                          </tr>
+                          <tr className="hover:bg-[#FAF9F5]">
+                            <td className="py-2 px-3 text-stone-500 font-medium">Stone</td>
+                            <td className="py-2 px-3 font-semibold text-stone-900">
+                              {product.stoneWeight || "No Stone"}
+                            </td>
+                          </tr>
+                          <tr className="hover:bg-[#FAF9F5]">
+                            <td className="py-2 px-3 text-stone-500 font-medium">Certification</td>
+                            <td className="py-2 px-3 font-semibold text-[#8F6D2C]">
+                              {product.certification || "100% BIS Hallmarked with HUID"}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* ACCORDION 3: Metals & Weights */}
+                <div className="py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion("metals")}
+                    className="w-full flex items-center justify-between text-left text-xs sm:text-sm font-serif font-semibold text-stone-900 hover:text-[#8F6D2C] transition cursor-pointer"
+                  >
+                    <span>Metals &amp; Weight Breakdown</span>
+                    <span className="text-lg font-mono text-stone-500">
+                      {accordionState.metals ? "−" : "+"}
+                    </span>
+                  </button>
+                  {accordionState.metals && (
+                    <div className="pt-2 text-xs text-stone-700 space-y-1.5 animate-fade-in font-light">
+                      <p>
+                        <strong className="font-semibold text-stone-900">Material:</strong>{" "}
+                        <span className="capitalize">{product.metal}</span>
+                      </p>
+                      <p>
+                        <strong className="font-semibold text-stone-900">Purity:</strong>{" "}
+                        <span>{product.purity}</span>
+                      </p>
+                      <p>
+                        <strong className="font-semibold text-stone-900">Gross Weight:</strong>{" "}
+                        <span className="font-mono font-medium">{product.grossWeight} gm</span>
+                      </p>
+                      <p>
+                        <strong className="font-semibold text-stone-900">Net Metal Weight:</strong>{" "}
+                        <span className="font-mono font-medium">{product.netGoldWeight} gm</span>
+                      </p>
+                      <p>
+                        <strong className="font-semibold text-stone-900">Making Charges:</strong>{" "}
+                        <span>₹{product.makingCharges.toLocaleString("en-IN")}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. SIMILAR PRODUCTS CAROUSEL / GRID */}
       {related.length > 0 && (
-        <section className="mt-16 pt-10 border-t border-[#E8DFC8]">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <section className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-16 border-t border-[#E8DFC8]">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-[#8F6D2C] flex items-center space-x-1">
-                <Sparkles className="w-3.5 h-3.5 text-[#DFBA73]" />
-                <span>Complete the Imperial Look</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-[#8F6D2C]">
+                Explore More Creations
               </span>
-              <h2 className="font-serif text-xl sm:text-2xl font-semibold text-stone-900 mt-1">
-                Matching Heritage Creations
+              <h2 className="font-serif text-2xl sm:text-3xl font-normal text-stone-900 mt-1">
+                You May Also Like
               </h2>
             </div>
             <Link
-              href={`/products?category=${product.category}`}
-              className="text-xs font-bold text-[#8F6D2C] hover:text-stone-900 uppercase tracking-wider flex items-center space-x-1"
+              href="/products"
+              className="text-xs font-semibold text-[#8F6D2C] hover:text-stone-900 uppercase tracking-wider flex items-center space-x-1"
             >
-              <span>Explore All {product.category}</span>
+              <span>View All</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid gap-6 sm:gap-8 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {related.map((rel) => (
               <ProductCard key={rel.id} product={rel} />
             ))}
           </div>
         </section>
+      )}
+
+      {/* MODAL: WHY CHOOSE YASHRAJ */}
+      {openPolicyModal === "why" && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setOpenPolicyModal(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#E8DFC8]">
+              <div className="flex items-center space-x-2 text-[#8F6D2C]">
+                <ShieldCheck className="w-5 h-5" />
+                <h3 className="font-serif font-bold text-lg text-stone-900">Why Choose Yashraj</h3>
+              </div>
+              <button
+                onClick={() => setOpenPolicyModal(null)}
+                className="p-1 rounded-full hover:bg-stone-100 text-stone-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4 text-xs sm:text-sm text-stone-700 leading-relaxed font-light">
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>100% BIS 916 Hallmark with Unique HUID:</strong> Every ornament is tested and certified by Government assaying laboratories.
+                </p>
+              </div>
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Transparent Price Breakdown:</strong> No hidden melting deductions or inflated wastage charges. Full itemized billing on every purchase.
+                </p>
+              </div>
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Lifetime Exchange &amp; Buyback Guarantee:</strong> 100% exchange value on net gold weight across all Yashraj showrooms.
+                </p>
+              </div>
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Artisanal Karigari Heritage:</strong> Over four decades of trusted trust, temple jewellery, and Odia filigree mastery.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: YASHRAJ POLICY */}
+      {openPolicyModal === "policy" && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setOpenPolicyModal(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#E8DFC8]">
+              <div className="flex items-center space-x-2 text-[#8F6D2C]">
+                <Truck className="w-5 h-5" />
+                <h3 className="font-serif font-bold text-lg text-stone-900">Yashraj Customer Policy</h3>
+              </div>
+              <button
+                onClick={() => setOpenPolicyModal(null)}
+                className="p-1 rounded-full hover:bg-stone-100 text-stone-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4 text-xs sm:text-sm text-stone-700 leading-relaxed font-light">
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Insured Armored Delivery:</strong> All dispatched parcels are 100% transit-insured via armored logistics with tamper-evident seal.
+                </p>
+              </div>
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Easy Exchange Policy:</strong> Bring your jewellery with invoice to any showroom for instant purity check and valuation.
+                </p>
+              </div>
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Complimentary Spa &amp; Ultrasonic Cleaning:</strong> Free lifetime maintenance, ultrasonic cleaning, and prong tightening.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SOCIAL SHARE POPUP (Facebook, X, WhatsApp, Instagram) */}
+      {isShareModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setIsShareModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 border border-[#E8DFC8] animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#F0EAE1]">
+              <div className="flex items-center space-x-2 text-[#8F6D2C]">
+                <Share2 className="w-5 h-5 text-[#8F6D2C]" />
+                <h3 className="font-serif font-bold text-lg text-stone-900">
+                  Share this Jewellery
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-stone-100 text-stone-500 hover:text-stone-800 transition cursor-pointer"
+                aria-label="Close share dialog"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Product Snapshot */}
+            <div className="flex items-center space-x-3.5 p-3 rounded-2xl bg-[#FAF9F5] border border-[#E8DFC8]">
+              <div className="w-14 h-14 rounded-xl overflow-hidden bg-white shrink-0 flex items-center justify-center">
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <h4 className="font-serif font-semibold text-xs sm:text-sm text-stone-900 truncate">
+                  {product.name}
+                </h4>
+                <p className="text-[11px] text-stone-500 mt-0.5">
+                  {product.purity} • <strong className="text-stone-900">₹{formattedPrice} (Approx)</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* 4 Social Channels Grid: WhatsApp, Facebook, X, Instagram */}
+            <div>
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">
+                Share via Social Media:
+              </p>
+              <div className="grid grid-cols-4 gap-2.5 sm:gap-3 text-center">
+                {/* 1. WhatsApp */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = typeof window !== "undefined" ? window.location.href : "";
+                    const text = encodeURIComponent(
+                      `Namaste! Look at this gorgeous ${product.name} at Yashraj Jewellers (₹${formattedPrice} Approx):\n${url}`
+                    );
+                    window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+                  }}
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#F0FAF4] hover:bg-[#E3F6EB] border border-[#25D366]/30 transition group cursor-pointer shadow-2xs"
+                >
+                  <div className="w-11 h-11 rounded-full bg-[#25D366] flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                    <svg className="w-5 h-5 text-white fill-current" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-semibold text-stone-800 mt-2">WhatsApp</span>
+                </button>
+
+                {/* 2. Facebook */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = typeof window !== "undefined" ? window.location.href : "";
+                    window.open(
+                      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+                      "_blank",
+                      "width=600,height=500"
+                    );
+                  }}
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#F0F5FF] hover:bg-[#E4EEFF] border border-[#1877F2]/30 transition group cursor-pointer shadow-2xs"
+                >
+                  <div className="w-11 h-11 rounded-full bg-[#1877F2] flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                    <svg className="w-5 h-5 text-white fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-semibold text-stone-800 mt-2">Facebook</span>
+                </button>
+
+                {/* 3. X (Twitter) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = typeof window !== "undefined" ? window.location.href : "";
+                    const text = encodeURIComponent(`Exquisite ${product.name} at Yashraj Jewellers:`);
+                    window.open(
+                      `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`,
+                      "_blank",
+                      "width=600,height=500"
+                    );
+                  }}
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl bg-stone-100 hover:bg-stone-200 border border-stone-300 transition group cursor-pointer shadow-2xs"
+                >
+                  <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                    <svg className="w-4 h-4 text-white fill-current" viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-semibold text-stone-800 mt-2">X</span>
+                </button>
+
+                {/* 4. Instagram */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleCopyLink();
+                    showToast("Link copied! Share it on your Instagram Story or Chat.");
+                    window.open("https://www.instagram.com/", "_blank");
+                  }}
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#FFF0F5] hover:bg-[#FFE5EE] border border-rose-300 transition group cursor-pointer shadow-2xs"
+                >
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                    <svg className="w-5 h-5 text-white fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-semibold text-stone-800 mt-2">Instagram</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Copy Link Input Bar */}
+            <div className="pt-1">
+              <label className="block text-xs font-semibold text-stone-600 mb-1.5">
+                Or copy product link:
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={typeof window !== "undefined" ? window.location.href : ""}
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-stone-50 border border-stone-200 text-xs text-stone-700 select-all focus:outline-hidden"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="px-4 py-2 rounded-xl bg-[#093B2A] text-white hover:bg-[#072F21] text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shrink-0"
+                >
+                  {copiedLink ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-[#DFBA73]" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

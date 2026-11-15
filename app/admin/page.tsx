@@ -43,6 +43,9 @@ import {
   Cloud,
   ImageIcon,
   Link2,
+  ArrowLeft,
+  FileText,
+  ClipboardPaste,
 } from "lucide-react";
 import {
   isSupabaseConfigured,
@@ -50,14 +53,9 @@ import {
   saveSupabaseCredentials,
   testSupabaseConnection,
 } from "../lib/supabase";
-import {
-  uploadImageToCloudinary,
-  getCloudinaryConfig,
-  saveCloudinaryConfig,
-  isCloudinaryConfigured,
-} from "../lib/cloudinary";
+import { uploadImageToCloudinary } from "../lib/cloudinary";
 
-// Default fallback image if no Cloudinary photo is uploaded
+// Default fallback image if no photo is uploaded
 const DEFAULT_FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80";
 
@@ -83,15 +81,31 @@ create table if not exists public.products (
   reviews_count integer default 1,
   in_stock boolean default true,
   images text[] not null default '{}',
+  description_image text,
   description text,
   certification text default 'Certified Authentic',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+alter table public.products add column if not exists description_image text;
+
+create index if not exists idx_products_category on public.products (category);
+create index if not exists idx_products_metal on public.products (metal);
+create index if not exists idx_products_in_stock on public.products (in_stock);
+create index if not exists idx_products_created_at on public.products (created_at desc);
+
 alter table public.products enable row level security;
+
+drop policy if exists "Public can view products" on public.products;
 create policy "Public can view products" on public.products for select using (true);
+
+drop policy if exists "Allow insert access" on public.products;
 create policy "Allow insert access" on public.products for insert with check (true);
+
+drop policy if exists "Allow update access" on public.products;
 create policy "Allow update access" on public.products for update using (true) with check (true);
+
+drop policy if exists "Allow delete access" on public.products;
 create policy "Allow delete access" on public.products for delete using (true);`;
 
 export default function AdminDashboardPage() {
@@ -125,63 +139,209 @@ export default function AdminDashboardPage() {
     setSupabaseKeyInput(creds.anonKey);
   }, [isSupabaseModalOpen]);
 
-  // Cloudinary Media Storage State
-  const [isCloudinaryModalOpen, setIsCloudinaryModalOpen] = useState(false);
-  const [cloudinaryCloudNameInput, setCloudinaryCloudNameInput] = useState("");
-  const [cloudinaryPresetInput, setCloudinaryPresetInput] = useState("");
+  // Product Media & Image Management State
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState("");
   const [copiedImageUrl, setCopiedImageUrl] = useState<string | null>(null);
+  const [isUploadingDescImage, setIsUploadingDescImage] = useState(false);
+  const [descImageInputUrl, setDescImageInputUrl] = useState("");
 
-  useEffect(() => {
-    const config = getCloudinaryConfig();
-    setCloudinaryCloudNameInput(config.cloudName);
-    setCloudinaryPresetInput(config.uploadPreset);
-  }, [isCloudinaryModalOpen]);
-
-  const handleSaveCloudinarySettings = () => {
-    saveCloudinaryConfig(cloudinaryCloudNameInput, cloudinaryPresetInput);
-    setIsCloudinaryModalOpen(false);
-    showToast("Cloudinary configuration saved! Images will upload to this Cloudinary cloud.");
+  // Convert File to base64 Data URL so local/offline files work reliably without errors
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
   };
 
-  const handleUploadFileToCloudinary = async (file: File) => {
-    const config = getCloudinaryConfig();
-    if (!config.cloudName || !config.uploadPreset) {
-      setIsCloudinaryModalOpen(true);
-      showToast("Please enter your Cloudinary Cloud Name & Upload Preset first.");
-      return;
+  // Upload to Cloudinary or fall back directly to data URL
+  const uploadFileSilently = async (file: File): Promise<{ url: string; isCloudinary: boolean }> => {
+    try {
+      const res = await uploadImageToCloudinary(file);
+      if (res && res.success && res.url) {
+        return { url: res.url, isCloudinary: true };
+      }
+    } catch {
+      // ignore cloud errors, fall back to data URL
     }
+    const dataUrl = await fileToDataUrl(file);
+    return { url: dataUrl, isCloudinary: false };
+  };
+
+  const handleUploadMultipleFiles = async (files: FileList | File[], sourceName = "image") => {
+    const fileList = Array.from(files);
+    if (fileList.length === 0) return;
 
     try {
       setIsUploadingImage(true);
-      setUploadProgressText(`Uploading ${file.name} to Cloudinary...`);
-      const res = await uploadImageToCloudinary(file);
-      if (res.success && res.url) {
+      const newUrls: string[] = [];
+      let anyCloudinary = false;
+
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        setUploadProgressText(`Uploading ${sourceName} ${i + 1} of ${fileList.length} to Cloudinary...`);
+        const { url, isCloudinary } = await uploadFileSilently(file);
+        if (url) {
+          newUrls.push(url);
+          if (isCloudinary) anyCloudinary = true;
+        }
+      }
+
+      if (newUrls.length > 0) {
         setFormData((prev) => ({
           ...prev,
-          images: [res.url!, ...prev.images],
+          images: [...prev.images, ...newUrls],
         }));
-        setImageInputUrl(res.url);
-        showToast("Image uploaded to Cloudinary! URL string stored successfully.");
-      } else {
-        showToast(res.error || "Failed to upload image to Cloudinary.");
+        if (anyCloudinary) {
+          showToast(`Uploaded ${newUrls.length} ${sourceName}(s) to Cloudinary!`);
+        } else {
+          showToast(`Added ${newUrls.length} ${sourceName}(s) successfully!`);
+        }
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Upload error";
-      showToast(msg);
+    } catch {
+      showToast(`Error processing ${sourceName} file(s)`);
     } finally {
       setIsUploadingImage(false);
       setUploadProgressText("");
     }
   };
 
-  // Authentication Guard
-  useEffect(() => {
-    if (!isAdminAuthenticated) {
-      router.push("/admin/login");
+  const handleUploadDescriptionImage = async (file: File) => {
+    try {
+      setIsUploadingDescImage(true);
+      setUploadProgressText("Uploading description photo to Cloudinary...");
+      const { url, isCloudinary } = await uploadFileSilently(file);
+      if (url) {
+        setFormData((prev) => ({
+          ...prev,
+          descriptionImage: url,
+        }));
+        setDescImageInputUrl(url);
+        if (isCloudinary) {
+          showToast("Description image uploaded to Cloudinary!");
+        } else {
+          showToast("Description left-side image updated!");
+        }
+      }
+    } catch {
+      showToast("Error processing description photo");
+    } finally {
+      setIsUploadingDescImage(false);
+      setUploadProgressText("");
     }
-  }, [isAdminAuthenticated, router]);
+  };
+
+  // Extract and upload image from clipboard (Ctrl + V)
+  const handleClipboardPaste = async (e: React.ClipboardEvent | ClipboardEvent) => {
+    const clipboardData = (e as ClipboardEvent).clipboardData || (e as React.ClipboardEvent).clipboardData;
+    if (!clipboardData) return false;
+
+    const files: File[] = [];
+
+    // 1. Check clipboard items for image blobs (e.g. copied screenshots, images from web or clipboard)
+    if (clipboardData.items) {
+      for (let i = 0; i < clipboardData.items.length; i++) {
+        const item = clipboardData.items[i];
+        if (item.type && item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            const ext = file.type.split("/")[1] || "png";
+            const namedFile = new File([file], `pasted-${Date.now()}-${i}.${ext}`, { type: file.type });
+            files.push(namedFile);
+          }
+        }
+      }
+    }
+
+    // 2. Backup check in clipboardData.files
+    if (files.length === 0 && clipboardData.files && clipboardData.files.length > 0) {
+      for (let i = 0; i < clipboardData.files.length; i++) {
+        const file = clipboardData.files[i];
+        if (file.type && file.type.startsWith("image/")) {
+          files.push(file);
+        }
+      }
+    }
+
+    if (files.length > 0) {
+      e.preventDefault();
+      await handleUploadMultipleFiles(files, "pasted image");
+      return true;
+    }
+
+    // 3. Direct image URL pasted into paste zone
+    const text = clipboardData.getData("text/plain")?.trim();
+    if (text && (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("data:image/"))) {
+      const isImgUrl =
+        /\.(jpeg|jpg|gif|png|webp|avif|svg)(\?.*)?$/i.test(text) ||
+        text.includes("cloudinary.com") ||
+        text.includes("unsplash.com") ||
+        text.startsWith("data:image/");
+      if (isImgUrl) {
+        const target = e.target as HTMLElement | null;
+        const isTextInput = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
+        if (!isTextInput) {
+          e.preventDefault();
+          setFormData((prev) => ({
+            ...prev,
+            images: [...prev.images, text],
+          }));
+          showToast("Pasted image link added to gallery!");
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  const handlePasteButtonClick = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        const files: File[] = [];
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const imgType = item.types.find((t) => t.startsWith("image/"));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const ext = imgType.split("/")[1] || "png";
+            files.push(new File([blob], `pasted-${Date.now()}-${i}.${ext}`, { type: imgType }));
+          }
+        }
+        if (files.length > 0) {
+          await handleUploadMultipleFiles(files, "pasted image");
+          return;
+        }
+      }
+    } catch {
+      // Permission might be denied or not supported; user will press Ctrl + V
+    }
+    showToast("Press Ctrl + V now to paste your image!");
+  };
+
+  const handlePasteDescriptionImage = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imgType = item.types.find((t) => t.startsWith("image/"));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const ext = imgType.split("/")[1] || "png";
+            const file = new File([blob], `pasted-desc-${Date.now()}.${ext}`, { type: imgType });
+            await handleUploadDescriptionImage(file);
+            return;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    showToast("Press Ctrl + V to paste description photo!");
+  };
 
   // Inventory Table Filters & Search
   const [tableSearch, setTableSearch] = useState("");
@@ -189,10 +349,36 @@ export default function AdminDashboardPage() {
   const [metalFilter, setMetalFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState<"all" | "in-stock" | "out-of-stock">("all");
 
-  // Modal State for Add / Edit Product
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Tab Navigation State: "inventory" (Catalogue Table) | "editor" (Add/Edit Form Tab)
+  const [adminTab, setAdminTab] = useState<"inventory" | "editor">("inventory");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Global window paste listener for Ctrl + V when in editor tab
+  useEffect(() => {
+    if (adminTab !== "editor") return;
+
+    const handleWindowPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTextInput = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
+
+      const hasImageFile = Array.from(e.clipboardData?.items || []).some(
+        (item) => item.type && item.type.startsWith("image/")
+      );
+
+      // If clipboard has an actual image file, always intercept and upload to Cloudinary
+      if (hasImageFile) {
+        handleClipboardPaste(e);
+      } else if (!isTextInput) {
+        handleClipboardPaste(e);
+      }
+    };
+
+    window.addEventListener("paste", handleWindowPaste);
+    return () => {
+      window.removeEventListener("paste", handleWindowPaste);
+    };
+  }, [adminTab]);
 
   // Form State
   const initialFormState: Omit<Product, "id"> & { id?: string } = {
@@ -207,17 +393,18 @@ export default function AdminDashboardPage() {
     price: 95000,
     originalPrice: 105000,
     grossWeight: 14.5,
-    netGoldWeight: 14.0,
+    netGoldWeight: 14.5,
     stoneWeight: "",
     makingCharges: 8500,
     gst: 2850,
     tag: "New Arrival",
     rating: 5.0,
-    reviewsCount: 1,
+    reviewsCount: 18,
     inStock: true,
     description: "",
     images: [],
-    certification: "Certified Authentic",
+    descriptionImage: "",
+    certification: "100% BIS 916 Hallmarked",
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -271,17 +458,23 @@ export default function AdminDashboardPage() {
       id: `yj-${Date.now()}`,
       code: newCode,
       images: [],
+      descriptionImage: "",
     });
     setEditingProductId(null);
     setImageInputUrl("");
-    setIsModalOpen(true);
+    setDescImageInputUrl("");
+    setAdminTab("editor");
   };
 
   const handleOpenEditModal = (product: Product) => {
-    setFormData({ ...product });
+    setFormData({
+      ...product,
+      descriptionImage: product.descriptionImage || (product.images && product.images.length > 1 ? product.images[1] : ""),
+    });
     setEditingProductId(product.id);
     setImageInputUrl("");
-    setIsModalOpen(true);
+    setDescImageInputUrl(product.descriptionImage || (product.images && product.images.length > 1 ? product.images[1] : ""));
+    setAdminTab("editor");
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -292,29 +485,45 @@ export default function AdminDashboardPage() {
       return;
     }
 
+    const finalPrice = Number(formData.price) || 0;
+    const finalGrossWeight = Number(formData.grossWeight) || 0;
+    const finalNetGoldWeight = Number(formData.netGoldWeight) || finalGrossWeight;
+    const finalMakingCharges = Number(formData.makingCharges) || Math.round(finalGrossWeight * 650);
+    const finalGst = Math.round(finalPrice * 0.03);
+    const finalOriginalPrice = Number(formData.originalPrice) || Math.round(finalPrice * 1.08);
+
+    const galleryImages = formData.images.length > 0 ? formData.images : [DEFAULT_FALLBACK_IMAGE];
+
     const finalProduct: Product = {
       ...formData,
       id: editingProductId || formData.id || `yj-${Date.now()}`,
-      price: Number(formData.price),
-      originalPrice: Number(formData.originalPrice),
-      grossWeight: Number(formData.grossWeight),
-      netGoldWeight: Number(formData.netGoldWeight),
-      makingCharges: Number(formData.makingCharges),
-      gst: Number(formData.gst) || Math.round(Number(formData.price) * 0.03),
-      images: formData.images.length > 0 ? formData.images : [DEFAULT_FALLBACK_IMAGE],
-      certification: formData.certification || "Certified Authentic",
+      price: finalPrice,
+      originalPrice: finalOriginalPrice,
+      grossWeight: finalGrossWeight,
+      netGoldWeight: finalNetGoldWeight,
+      makingCharges: finalMakingCharges,
+      gst: finalGst,
+      images: galleryImages,
+      descriptionImage: formData.descriptionImage?.trim() || undefined,
+      gender: formData.gender || "women",
+      occasion: formData.occasion || "wedding",
+      rating: formData.rating || 5.0,
+      reviewsCount: formData.reviewsCount || 18,
+      certification: formData.certification || "100% BIS 916 Hallmarked",
       description:
         formData.description ||
-        `${formData.name} - Handcrafted ${formData.purity} ${formData.metal} jewellery from Yashraj Jewellers.`,
+        `${formData.name} - Handcrafted ${formData.purity} ${formData.metal} jewellery from Yashraj Jewellers. BIS 916 Hallmarked with transparent wholesale billing.`,
     };
 
     if (editingProductId) {
       await updateProduct(editingProductId, finalProduct);
+      showToast(`Updated "${finalProduct.name}" specs successfully!`);
     } else {
       await addProduct(finalProduct);
+      showToast(`Published "${finalProduct.name}" to catalogue and storefront!`);
     }
 
-    setIsModalOpen(false);
+    setAdminTab("inventory");
   };
 
   const handleAddImageUrl = () => {
@@ -332,6 +541,19 @@ export default function AdminDashboardPage() {
       ...prev,
       images: prev.images.filter((_, idx) => idx !== indexToRemove),
     }));
+  };
+
+  const handleSetCoverImage = (index: number) => {
+    if (index === 0 || index >= formData.images.length) return;
+    setFormData((prev) => {
+      const imgs = [...prev.images];
+      const [selected] = imgs.splice(index, 1);
+      return {
+        ...prev,
+        images: [selected, ...imgs],
+      };
+    });
+    showToast("Set as primary cover image!");
   };
 
   const handleAutoGenerateSku = () => {
@@ -428,414 +650,502 @@ export default function AdminDashboardPage() {
       </header>
 
       {/* 2. ADMIN DASHBOARD CONTENT */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-8">
-        {/* WELCOME BANNER & STATS */}
-        <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900">
-                  Jewellery Inventory Management
-                </h1>
-                <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                    isSupabaseReady
-                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                      : "bg-amber-100 text-amber-800 border border-amber-300"
-                  }`}
-                >
-                  {isSupabaseReady ? "Supabase Live Database" : "Local & Cloud Ready"}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-6">
+        {/* TOP TAB NAVIGATION BAR */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8DFC8] pb-4">
+          <div className="flex items-center space-x-2">
+            {/* Tab 1: Catalogue Inventory */}
+            <button
+              type="button"
+              onClick={() => setAdminTab("inventory")}
+              className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${adminTab === "inventory"
+                ? "bg-gradient-to-r from-[#DFBA73] to-[#9E7B35] text-stone-950 shadow-md"
+                : "bg-white text-stone-700 border border-[#DEC9A2] hover:bg-[#FAF3E0]"
+                }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>Catalogue Inventory ({products.length})</span>
+            </button>
+
+            {/* Tab 2: Add / Edit Product Tab */}
+            <button
+              type="button"
+              onClick={() => {
+                if (adminTab !== "editor" && !editingProductId) {
+                  handleOpenAddModal();
+                } else {
+                  setAdminTab("editor");
+                }
+              }}
+              className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${adminTab === "editor"
+                ? "bg-gradient-to-r from-[#DFBA73] to-[#9E7B35] text-stone-950 shadow-md"
+                : "bg-white text-stone-700 border border-[#DEC9A2] hover:bg-[#FAF3E0]"
+                }`}
+            >
+              {editingProductId ? (
+                <>
+                  <Edit className="w-4 h-4" />
+                  <span>
+                    Edit Piece {formData.name ? `(${formData.name.length > 20 ? formData.name.slice(0, 20) + "..." : formData.name})` : ""}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span>Add New Jewellery Piece</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Quick Action when on Inventory Tab */}
+          {adminTab === "inventory" && (
+            <button
+              type="button"
+              onClick={handleOpenAddModal}
+              className="px-4 py-2 rounded-xl bg-[#FAF3E0] hover:bg-[#8F6D2C] text-[#8F6D2C] hover:text-white border border-[#DEC9A2] text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+              <span>Create New Piece</span>
+            </button>
+          )}
+        </div>
+
+        {adminTab === "inventory" ? (
+          <>
+            {/* WELCOME BANNER & STATS */}
+            <section className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900">
+                      Jewellery Inventory Management
+                    </h1>
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${isSupabaseReady
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        : "bg-amber-100 text-amber-800 border border-amber-300"
+                        }`}
+                    >
+                      {isSupabaseReady ? "Supabase Live Database" : "Local & Cloud Ready"}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-stone-500 mt-1">
+                    Real-time inventory database. All creations added here are immediately saved into your database and visible on your storefront.
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2.5">
+                  {/* Primary Action Button */}
+                  <button
+                    onClick={handleOpenAddModal}
+                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-stone-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:shadow-xl hover:brightness-105 active:scale-98 transition flex items-center justify-center space-x-2 cursor-pointer self-start sm:self-auto shrink-0"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>Add New Jewellery Product</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats Overview Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 pt-2">
+                <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
+                    Total Products
+                  </span>
+                  <p className="font-serif font-bold text-2xl text-stone-900 mt-1">{stats.total}</p>
+                  <span className="text-[11px] text-emerald-700 font-medium">Active in Catalog</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-600 block">
+                    22K/24K Gold
+                  </span>
+                  <p className="font-serif font-bold text-2xl text-stone-900 mt-1">{stats.goldCount}</p>
+                  <span className="text-[11px] text-stone-500">Hallmarked Items</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600 block">
+                    Certified Diamond
+                  </span>
+                  <p className="font-serif font-bold text-2xl text-stone-900 mt-1">
+                    {stats.diamondCount}
+                  </p>
+                  <span className="text-[11px] text-stone-500">Solitaires &amp; Rings</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 block">
+                    Silver &amp; Tarakasi
+                  </span>
+                  <p className="font-serif font-bold text-2xl text-stone-900 mt-1">{stats.silverCount}</p>
+                  <span className="text-[11px] text-stone-500">GI Tagged Filigree</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block">
+                    In Stock Ready
+                  </span>
+                  <p className="font-serif font-bold text-2xl text-stone-900 mt-1">{stats.inStockCount}</p>
+                  <span className="text-[11px] text-emerald-700 font-medium">Ready for Dispatch</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FAF3E0] to-[#F5E8CB] border border-[#DEC9A2] shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-[#8F6D2C] block">
+                    Inventory Valuation
+                  </span>
+                  <p className="font-serif font-bold text-xl sm:text-2xl text-stone-950 mt-1 font-mono">
+                    ₹{(stats.totalValue / 100000).toFixed(2)}L
+                  </p>
+                  <span className="text-[10px] text-[#7A5B1F] font-semibold">Live Quoted Value</span>
+                </div>
+              </div>
+            </section>
+
+            {/* 3. INVENTORY MANAGEMENT CONTROLS & TABLE */}
+            <section className="bg-white rounded-3xl border border-[#E8DFC8] shadow-xs overflow-hidden">
+              {/* Controls Bar: Search & Filter Dropdowns */}
+              <div className="p-4 sm:p-5 border-b border-[#F0EAE1] bg-[#FAF9F5] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                {/* Search Input */}
+                <div className="relative flex-1 max-w-md">
+                  <Search className="w-4 h-4 text-[#8F6D2C] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    placeholder="Search products by title, SKU (e.g. YJ-BRD-8821), or metal..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#DEC9A2] text-xs text-stone-900 placeholder-stone-400 focus:outline-hidden focus:border-[#C5A059]"
+                  />
+                  {tableSearch && (
+                    <button
+                      onClick={() => setTableSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {/* Category Filter */}
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="px-3 py-2 bg-white rounded-xl border border-[#DEC9A2] text-stone-800 text-xs focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="all">All Categories</option>
+                    {CATEGORIES.slice(1).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Metal Filter */}
+                  <select
+                    value={metalFilter}
+                    onChange={(e) => setMetalFilter(e.target.value)}
+                    className="px-3 py-2 bg-white rounded-xl border border-[#DEC9A2] text-stone-800 text-xs focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="all">All Metals</option>
+                    <option value="gold">Gold (22K / 24K)</option>
+                    <option value="diamond">Certified Diamond</option>
+                    <option value="silver">Silver &amp; Filigree</option>
+                  </select>
+
+                  {/* Stock Filter */}
+                  <select
+                    value={stockFilter}
+                    onChange={(e) => setStockFilter(e.target.value as any)}
+                    className="px-3 py-2 bg-white rounded-xl border border-[#DEC9A2] text-stone-800 text-xs focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="all">All Stock Status</option>
+                    <option value="in-stock">In Stock Only</option>
+                    <option value="out-of-stock">Out of Stock</option>
+                  </select>
+
+                  {/* Reset to Default Button */}
+                  <button
+                    onClick={() => {
+                      if (confirm("Reset inventory to original factory showroom items? Any custom products will be restored to default.")) {
+                        resetProductsToDefault();
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl border border-stone-300 hover:bg-stone-100 text-stone-600 transition flex items-center space-x-1"
+                    title="Restore default catalog"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Reset Defaults</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Table Container */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-stone-700 border-collapse">
+                  <thead>
+                    <tr className="bg-[#FAF3E0] text-[#7A5B1F] border-b border-[#DEC9A2] text-[11px] uppercase tracking-wider font-bold">
+                      <th className="py-3.5 px-4">Item &amp; SKU</th>
+                      <th className="py-3.5 px-3">Category</th>
+                      <th className="py-3.5 px-3">Metal &amp; Purity</th>
+                      <th className="py-3.5 px-3">Gross Wt / Net Wt</th>
+                      <th className="py-3.5 px-3">Selling Price</th>
+                      <th className="py-3.5 px-3">Stock Status</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F2ECE1]">
+                    {filteredProducts.length > 0 ? (
+                      filteredProducts.map((prod) => (
+                        <tr key={prod.id} className="hover:bg-[#FAF9F5] transition-colors">
+                          {/* Product Thumbnail & Title */}
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-12 h-12 rounded-xl bg-stone-100 border border-[#DEC9A2] overflow-hidden shrink-0 relative">
+                                <img
+                                  src={prod.images[0]}
+                                  alt={prod.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div>
+                                <p className="font-serif font-bold text-stone-900 text-xs sm:text-sm line-clamp-1">
+                                  {prod.name}
+                                </p>
+                                <div className="flex items-center space-x-1.5 mt-0.5">
+                                  <span className="font-mono text-[10px] text-stone-500 font-bold">
+                                    {prod.code}
+                                  </span>
+                                  {prod.tag && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#FAF3E0] text-[#8F6D2C] border border-[#DEC9A2]">
+                                      {prod.tag}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Category */}
+                          <td className="py-3 px-3 capitalize font-medium text-stone-800">
+                            {prod.category}
+                          </td>
+
+                          {/* Metal & Purity */}
+                          <td className="py-3 px-3">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${prod.metal === "gold"
+                                ? "bg-amber-100 text-amber-800"
+                                : prod.metal === "diamond"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-slate-100 text-slate-800"
+                                }`}
+                            >
+                              {prod.purity}
+                            </span>
+                          </td>
+
+                          {/* Weights */}
+                          <td className="py-3 px-3 font-mono">
+                            <div>
+                              <strong>{prod.grossWeight}g</strong> gross
+                            </div>
+                            <div className="text-[10px] text-stone-400">
+                              {prod.netGoldWeight}g net
+                            </div>
+                          </td>
+
+                          {/* Price */}
+                          <td className="py-3 px-3 font-mono">
+                            <p className="font-bold text-stone-900 text-sm">
+                              ₹{prod.price.toLocaleString("en-IN")}
+                            </p>
+                            <p className="text-[10px] text-stone-400 line-through">
+                              ₹{prod.originalPrice.toLocaleString("en-IN")}
+                            </p>
+                          </td>
+
+                          {/* Stock Switch */}
+                          <td className="py-3 px-3">
+                            <button
+                              onClick={() => handleToggleStock(prod)}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition flex items-center space-x-1 ${prod.inStock
+                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                : "bg-rose-100 text-rose-800 hover:bg-rose-200"
+                                }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${prod.inStock ? "bg-emerald-600" : "bg-rose-600"
+                                  }`}
+                              />
+                              <span>{prod.inStock ? "In Stock" : "Out of Stock"}</span>
+                            </button>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end space-x-1.5">
+                              {/* View on Storefront */}
+                              <Link
+                                href={`/products/${prod.id}`}
+                                target="_blank"
+                                className="p-1.5 rounded-lg hover:bg-stone-200 text-stone-600 hover:text-stone-900 transition"
+                                title="Preview on Storefront"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Link>
+
+                              {/* Edit */}
+                              <button
+                                onClick={() => handleOpenEditModal(prod)}
+                                className="p-1.5 rounded-lg hover:bg-[#FAF3E0] text-[#8F6D2C] hover:text-[#7A5B1F] transition cursor-pointer"
+                                title="Edit Product"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                                onClick={() => setDeleteConfirmId(prod.id)}
+                                className="p-1.5 rounded-lg hover:bg-rose-100 text-rose-600 hover:text-rose-800 transition cursor-pointer"
+                                title="Delete Product"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="py-16 text-center text-stone-400">
+                          {products.length === 0 ? (
+                            <div className="max-w-md mx-auto space-y-3">
+                              <div className="w-14 h-14 mx-auto rounded-full bg-[#FAF3E0] border border-[#DEC9A2] flex items-center justify-center text-[#8F6D2C]">
+                                <Package className="w-7 h-7" />
+                              </div>
+                              <h3 className="font-serif font-bold text-lg text-stone-900">
+                                Inventory Clean &amp; Ready for Real Products
+                              </h3>
+                              <p className="text-xs text-stone-500">
+                                All mock and demo data have been removed. Click below to add your first real jewellery masterpiece or sync with Supabase.
+                              </p>
+                              <div className="pt-2 flex justify-center gap-2">
+                                <button
+                                  onClick={handleOpenAddModal}
+                                  className="px-4 py-2 bg-gradient-to-r from-[#DFBA73] to-[#9E7B35] text-stone-950 font-bold text-xs uppercase tracking-wider rounded-xl shadow transition"
+                                >
+                                  + Add First Product
+                                </button>
+                                <button
+                                  onClick={() => setIsSupabaseModalOpen(true)}
+                                  className="px-4 py-2 bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 font-bold text-xs uppercase tracking-wider rounded-xl transition"
+                                >
+                                  Connect Supabase
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="font-serif text-base text-stone-600">No items match your filter criteria.</p>
+                              <button
+                                onClick={() => {
+                                  setTableSearch("");
+                                  setCategoryFilter("all");
+                                  setMetalFilter("all");
+                                  setStockFilter("all");
+                                }}
+                                className="mt-2 text-xs font-bold text-[#8F6D2C] underline"
+                              >
+                                Reset Table Filters
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer Summary */}
+              <div className="p-4 bg-[#FAF9F5] border-t border-[#F0EAE1] flex items-center justify-between text-xs text-stone-500">
+                <span>
+                  Showing <strong>{filteredProducts.length}</strong> of {products.length} registered creations
+                </span>
+                <span className="font-mono text-[#8F6D2C] font-semibold">
+                  Live Bullion Assay Standard: BIS 916
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-stone-500 mt-1">
-                Real-time inventory database. All creations added here are immediately saved into your database and visible on your storefront.
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2.5">
-              {/* Primary Action Button */}
-              <button
-                onClick={handleOpenAddModal}
-                className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-stone-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:shadow-xl hover:brightness-105 active:scale-98 transition flex items-center justify-center space-x-2 cursor-pointer self-start sm:self-auto shrink-0"
-              >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>Add New Jewellery Product</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Stats Overview Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 pt-2">
-            <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
-                Total Products
-              </span>
-              <p className="font-serif font-bold text-2xl text-stone-900 mt-1">{stats.total}</p>
-              <span className="text-[11px] text-emerald-700 font-medium">Active in Catalog</span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-amber-600 block">
-                22K/24K Gold
-              </span>
-              <p className="font-serif font-bold text-2xl text-stone-900 mt-1">{stats.goldCount}</p>
-              <span className="text-[11px] text-stone-500">Hallmarked Items</span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600 block">
-                Certified Diamond
-              </span>
-              <p className="font-serif font-bold text-2xl text-stone-900 mt-1">
-                {stats.diamondCount}
-              </p>
-              <span className="text-[11px] text-stone-500">Solitaires &amp; Rings</span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 block">
-                Silver &amp; Tarakasi
-              </span>
-              <p className="font-serif font-bold text-2xl text-stone-900 mt-1">{stats.silverCount}</p>
-              <span className="text-[11px] text-stone-500">GI Tagged Filigree</span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white border border-[#E8DFC8] shadow-xs">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block">
-                In Stock Ready
-              </span>
-              <p className="font-serif font-bold text-2xl text-stone-900 mt-1">{stats.inStockCount}</p>
-              <span className="text-[11px] text-emerald-700 font-medium">Ready for Dispatch</span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FAF3E0] to-[#F5E8CB] border border-[#DEC9A2] shadow-xs">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-[#8F6D2C] block">
-                Inventory Valuation
-              </span>
-              <p className="font-serif font-bold text-xl sm:text-2xl text-stone-950 mt-1 font-mono">
-                ₹{(stats.totalValue / 100000).toFixed(2)}L
-              </p>
-              <span className="text-[10px] text-[#7A5B1F] font-semibold">Live Quoted Value</span>
-            </div>
-          </div>
-        </section>
-
-        {/* 3. INVENTORY MANAGEMENT CONTROLS & TABLE */}
-        <section className="bg-white rounded-3xl border border-[#E8DFC8] shadow-xs overflow-hidden">
-          {/* Controls Bar: Search & Filter Dropdowns */}
-          <div className="p-4 sm:p-5 border-b border-[#F0EAE1] bg-[#FAF9F5] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 text-[#8F6D2C] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={tableSearch}
-                onChange={(e) => setTableSearch(e.target.value)}
-                placeholder="Search products by title, SKU (e.g. YJ-BRD-8821), or metal..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#DEC9A2] text-xs text-stone-900 placeholder-stone-400 focus:outline-hidden focus:border-[#C5A059]"
-              />
-              {tableSearch && (
+            </section>
+          </>
+        ) : (
+          /* DEDICATED ADD / EDIT PRODUCT TAB */
+          <div className="bg-white rounded-3xl border border-[#E8DFC8] shadow-xs overflow-hidden">
+            {/* Editor Tab Header */}
+            <div className="p-5 px-6 border-b border-[#E8DFC8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FAF9F5]">
+              <div className="flex items-center space-x-3">
                 <button
-                  onClick={() => setTableSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
+                  type="button"
+                  onClick={() => setAdminTab("inventory")}
+                  className="p-2 rounded-xl bg-white border border-[#DEC9A2] text-[#8F6D2C] hover:bg-[#FAF3E0] transition cursor-pointer"
+                  title="Back to Catalogue Table"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <ArrowLeft className="w-4 h-4" />
                 </button>
-              )}
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              {/* Category Filter */}
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 bg-white rounded-xl border border-[#DEC9A2] text-stone-800 text-xs focus:outline-hidden cursor-pointer"
-              >
-                <option value="all">All Categories</option>
-                {CATEGORIES.slice(1).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-
-              {/* Metal Filter */}
-              <select
-                value={metalFilter}
-                onChange={(e) => setMetalFilter(e.target.value)}
-                className="px-3 py-2 bg-white rounded-xl border border-[#DEC9A2] text-stone-800 text-xs focus:outline-hidden cursor-pointer"
-              >
-                <option value="all">All Metals</option>
-                <option value="gold">Gold (22K / 24K)</option>
-                <option value="diamond">Certified Diamond</option>
-                <option value="silver">Silver &amp; Filigree</option>
-              </select>
-
-              {/* Stock Filter */}
-              <select
-                value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value as any)}
-                className="px-3 py-2 bg-white rounded-xl border border-[#DEC9A2] text-stone-800 text-xs focus:outline-hidden cursor-pointer"
-              >
-                <option value="all">All Stock Status</option>
-                <option value="in-stock">In Stock Only</option>
-                <option value="out-of-stock">Out of Stock</option>
-              </select>
-
-              {/* Reset to Default Button */}
-              <button
-                onClick={() => {
-                  if (confirm("Reset inventory to original factory showroom items? Any custom products will be restored to default.")) {
-                    resetProductsToDefault();
-                  }
-                }}
-                className="px-3 py-2 rounded-xl border border-stone-300 hover:bg-stone-100 text-stone-600 transition flex items-center space-x-1"
-                title="Restore default catalog"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Reset Defaults</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Table Container */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-stone-700 border-collapse">
-              <thead>
-                <tr className="bg-[#FAF3E0] text-[#7A5B1F] border-b border-[#DEC9A2] text-[11px] uppercase tracking-wider font-bold">
-                  <th className="py-3.5 px-4">Item &amp; SKU</th>
-                  <th className="py-3.5 px-3">Category</th>
-                  <th className="py-3.5 px-3">Metal &amp; Purity</th>
-                  <th className="py-3.5 px-3">Gross Wt / Net Wt</th>
-                  <th className="py-3.5 px-3">Selling Price</th>
-                  <th className="py-3.5 px-3">Stock Status</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F2ECE1]">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((prod) => (
-                    <tr key={prod.id} className="hover:bg-[#FAF9F5] transition-colors">
-                      {/* Product Thumbnail & Title */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-[#DEC9A2] overflow-hidden shrink-0 relative">
-                            <img
-                              src={prod.images[0]}
-                              alt={prod.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div>
-                            <p className="font-serif font-bold text-stone-900 text-xs sm:text-sm line-clamp-1">
-                              {prod.name}
-                            </p>
-                            <div className="flex items-center space-x-1.5 mt-0.5">
-                              <span className="font-mono text-[10px] text-stone-500 font-bold">
-                                {prod.code}
-                              </span>
-                              {prod.tag && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#FAF3E0] text-[#8F6D2C] border border-[#DEC9A2]">
-                                  {prod.tag}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Category */}
-                      <td className="py-3 px-3 capitalize font-medium text-stone-800">
-                        {prod.category}
-                      </td>
-
-                      {/* Metal & Purity */}
-                      <td className="py-3 px-3">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            prod.metal === "gold"
-                              ? "bg-amber-100 text-amber-800"
-                              : prod.metal === "diamond"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-slate-100 text-slate-800"
-                          }`}
-                        >
-                          {prod.purity}
-                        </span>
-                      </td>
-
-                      {/* Weights */}
-                      <td className="py-3 px-3 font-mono">
-                        <div>
-                          <strong>{prod.grossWeight}g</strong> gross
-                        </div>
-                        <div className="text-[10px] text-stone-400">
-                          {prod.netGoldWeight}g net
-                        </div>
-                      </td>
-
-                      {/* Price */}
-                      <td className="py-3 px-3 font-mono">
-                        <p className="font-bold text-stone-900 text-sm">
-                          ₹{prod.price.toLocaleString("en-IN")}
-                        </p>
-                        <p className="text-[10px] text-stone-400 line-through">
-                          ₹{prod.originalPrice.toLocaleString("en-IN")}
-                        </p>
-                      </td>
-
-                      {/* Stock Switch */}
-                      <td className="py-3 px-3">
-                        <button
-                          onClick={() => handleToggleStock(prod)}
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition flex items-center space-x-1 ${
-                            prod.inStock
-                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                              : "bg-rose-100 text-rose-800 hover:bg-rose-200"
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              prod.inStock ? "bg-emerald-600" : "bg-rose-600"
-                            }`}
-                          />
-                          <span>{prod.inStock ? "In Stock" : "Out of Stock"}</span>
-                        </button>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end space-x-1.5">
-                          {/* View on Storefront */}
-                          <Link
-                            href={`/products/${prod.id}`}
-                            target="_blank"
-                            className="p-1.5 rounded-lg hover:bg-stone-200 text-stone-600 hover:text-stone-900 transition"
-                            title="Preview on Storefront"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </Link>
-
-                          {/* Edit */}
-                          <button
-                            onClick={() => handleOpenEditModal(prod)}
-                            className="p-1.5 rounded-lg hover:bg-[#FAF3E0] text-[#8F6D2C] hover:text-[#7A5B1F] transition cursor-pointer"
-                            title="Edit Product"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-
-                          {/* Delete */}
-                          <button
-                            onClick={() => setDeleteConfirmId(prod.id)}
-                            className="p-1.5 rounded-lg hover:bg-rose-100 text-rose-600 hover:text-rose-800 transition cursor-pointer"
-                            title="Delete Product"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="py-16 text-center text-stone-400">
-                      {products.length === 0 ? (
-                        <div className="max-w-md mx-auto space-y-3">
-                          <div className="w-14 h-14 mx-auto rounded-full bg-[#FAF3E0] border border-[#DEC9A2] flex items-center justify-center text-[#8F6D2C]">
-                            <Package className="w-7 h-7" />
-                          </div>
-                          <h3 className="font-serif font-bold text-lg text-stone-900">
-                            Inventory Clean &amp; Ready for Real Products
-                          </h3>
-                          <p className="text-xs text-stone-500">
-                            All mock and demo data have been removed. Click below to add your first real jewellery masterpiece or sync with Supabase.
-                          </p>
-                          <div className="pt-2 flex justify-center gap-2">
-                            <button
-                              onClick={handleOpenAddModal}
-                              className="px-4 py-2 bg-gradient-to-r from-[#DFBA73] to-[#9E7B35] text-stone-950 font-bold text-xs uppercase tracking-wider rounded-xl shadow transition"
-                            >
-                              + Add First Product
-                            </button>
-                            <button
-                              onClick={() => setIsSupabaseModalOpen(true)}
-                              className="px-4 py-2 bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 font-bold text-xs uppercase tracking-wider rounded-xl transition"
-                            >
-                              Connect Supabase
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="font-serif text-base text-stone-600">No items match your filter criteria.</p>
-                          <button
-                            onClick={() => {
-                              setTableSearch("");
-                              setCategoryFilter("all");
-                              setMetalFilter("all");
-                              setStockFilter("all");
-                            }}
-                            className="mt-2 text-xs font-bold text-[#8F6D2C] underline"
-                          >
-                            Reset Table Filters
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Table Footer Summary */}
-          <div className="p-4 bg-[#FAF9F5] border-t border-[#F0EAE1] flex items-center justify-between text-xs text-stone-500">
-            <span>
-              Showing <strong>{filteredProducts.length}</strong> of {products.length} registered creations
-            </span>
-            <span className="font-mono text-[#8F6D2C] font-semibold">
-              Live Bullion Assay Standard: BIS 916
-            </span>
-          </div>
-        </section>
-      </main>
-
-      {/* 4. ADD / EDIT PRODUCT MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
-          <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="p-4 px-6 border-b border-[#E8DFC8] flex items-center justify-between bg-[#FAF9F5]">
-              <div className="flex items-center space-x-2">
                 <div className="p-2 bg-[#FAF3E0] text-[#8F6D2C] rounded-xl border border-[#DEC9A2]">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-stone-900 text-lg">
+                  <h2 className="font-serif font-bold text-stone-900 text-lg sm:text-xl">
                     {editingProductId ? "Edit Jewellery Creation" : "Add New Jewellery Piece"}
-                  </h3>
+                  </h2>
                   <p className="text-[11px] text-stone-500">
                     Publish directly to the Yashraj Jewellers catalogue and storefront.
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full hover:bg-stone-200 text-stone-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              <div className="flex items-center space-x-2">
+                {editingProductId ? (
+                  <button
+                    type="button"
+                    onClick={handleOpenAddModal}
+                    className="px-3.5 py-1.5 rounded-xl bg-[#FAF3E0] text-[#8F6D2C] border border-[#DEC9A2] font-semibold text-xs flex items-center space-x-1.5 hover:bg-[#8F6D2C] hover:text-white transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Switch to Add New Piece</span>
+                  </button>
+                ) : (
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    New Creation Mode
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setAdminTab("inventory")}
+                  className="px-3.5 py-1.5 rounded-xl border border-stone-200 hover:bg-stone-100 text-stone-600 text-xs font-semibold cursor-pointer"
+                >
+                  Back to Catalogue
+                </button>
+              </div>
             </div>
 
-            {/* Modal Form Scroll Area */}
-            <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
-              {/* SECTION 1: BASIC IDENTIFICATION */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-[#8F6D2C] uppercase tracking-wider text-[11px] border-b border-[#F0EAE1] pb-1">
-                  1. Product Identification
-                </h4>
+            {/* Editor Form */}
+            <form onSubmit={handleFormSubmit} className="p-6 sm:p-8 space-y-6 text-xs">
+              {/* SECTION 1: ESSENTIAL PRODUCT DETAILS */}
+              <div className="space-y-4">
+                <div className="border-b border-[#F0EAE1] pb-1.5 flex items-center justify-between">
+                  <h4 className="font-bold text-[#8F6D2C] uppercase tracking-wider text-[11px] flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>1. Essential Jewellery Details</span>
+                  </h4>
+                  <span className="text-[10px] text-stone-400">* Required fields</span>
+                </div>
+
+                {/* Name & SKU */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2 space-y-1">
                     <label className="font-semibold text-stone-700">Jewellery Name *</label>
@@ -844,7 +1154,7 @@ export default function AdminDashboardPage() {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. Rajwada Royal 22K Gold Antique Choker Set"
+                      placeholder="e.g. Royal 22K Gold Antique Jhumka Earrings"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden focus:border-[#C5A059]"
                     />
                   </div>
@@ -855,7 +1165,7 @@ export default function AdminDashboardPage() {
                       <button
                         type="button"
                         onClick={handleAutoGenerateSku}
-                        className="text-[10px] text-[#8F6D2C] hover:underline font-bold"
+                        className="text-[10px] text-[#8F6D2C] hover:underline font-bold cursor-pointer"
                       >
                         Auto SKU
                       </button>
@@ -865,20 +1175,21 @@ export default function AdminDashboardPage() {
                       required
                       value={formData.code}
                       onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                      placeholder="YJ-BRD-8821"
+                      placeholder="YJ-GLD-8821"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono font-bold focus:outline-hidden focus:border-[#C5A059]"
                     />
                   </div>
                 </div>
 
+                {/* Category, Metal, Purity, Special Tag */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {/* Category */}
                   <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Category</label>
+                    <label className="font-semibold text-stone-700">Category *</label>
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
                     >
                       {CATEGORIES.slice(1).map((c) => (
                         <option key={c.id} value={c.id}>
@@ -890,11 +1201,11 @@ export default function AdminDashboardPage() {
 
                   {/* Metal */}
                   <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Metal Type</label>
+                    <label className="font-semibold text-stone-700">Metal Type *</label>
                     <select
                       value={formData.metal}
                       onChange={(e) => setFormData({ ...formData, metal: e.target.value as any })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
                     >
                       <option value="gold">Gold</option>
                       <option value="diamond">Certified Diamond</option>
@@ -904,11 +1215,11 @@ export default function AdminDashboardPage() {
 
                   {/* Purity */}
                   <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Purity Standard</label>
+                    <label className="font-semibold text-stone-700">Purity Standard *</label>
                     <select
                       value={formData.purity}
                       onChange={(e) => setFormData({ ...formData, purity: e.target.value as any })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
                     >
                       <option value="22KT (916 BIS)">22KT (916 BIS)</option>
                       <option value="24KT (999 Pure)">24KT (999 Pure)</option>
@@ -923,7 +1234,7 @@ export default function AdminDashboardPage() {
                     <select
                       value={formData.tag || ""}
                       onChange={(e) => setFormData({ ...formData, tag: (e.target.value || undefined) as any })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
                     >
                       <option value="">None</option>
                       <option value="Bestseller">Bestseller</option>
@@ -935,171 +1246,154 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* Gross Weight, Selling Price, In Stock */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Gender / Fit</label>
-                    <select
-                      value={formData.gender}
-                      onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
-                    >
-                      <option value="women">Women</option>
-                      <option value="men">Men</option>
-                      <option value="kids">Kids</option>
-                      <option value="unisex">Unisex / Bullion</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Occasion</label>
-                    <select
-                      value={formData.occasion}
-                      onChange={(e) => setFormData({ ...formData, occasion: e.target.value as any })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden"
-                    >
-                      <option value="wedding">Vivaha Bridal</option>
-                      <option value="festive">Festive &amp; Puja</option>
-                      <option value="daily-wear">Everyday Elegance</option>
-                      <option value="light-occasion">Light Occasions</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 2: WEIGHTS & PRICING */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-[#8F6D2C] uppercase tracking-wider text-[11px] border-b border-[#F0EAE1] pb-1">
-                  2. Weights &amp; Transparent Billing Specs
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Gross Weight (g) *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={formData.grossWeight}
-                      onChange={(e) => setFormData({ ...formData, grossWeight: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono focus:outline-hidden"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Net Gold Wt (g) *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={formData.netGoldWeight}
-                      onChange={(e) => setFormData({ ...formData, netGoldWeight: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono focus:outline-hidden"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Making Charges (₹)</label>
-                    <input
-                      type="number"
-                      value={formData.makingCharges}
-                      onChange={(e) => setFormData({ ...formData, makingCharges: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono focus:outline-hidden"
-                    />
+                    <label className="font-semibold text-stone-700">Gross Weight (grams) *</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.001"
+                        required
+                        value={formData.grossWeight}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setFormData({
+                            ...formData,
+                            grossWeight: val,
+                            netGoldWeight: val,
+                          });
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono font-bold focus:outline-hidden focus:border-[#C5A059]"
+                        placeholder="14.50"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 font-medium text-xs pointer-events-none">
+                        gm
+                      </span>
+                    </div>
                   </div>
 
                   <div className="space-y-1">
                     <label className="font-semibold text-stone-700">Selling Price (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono font-bold focus:outline-hidden"
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                        className="w-full pl-7 pr-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono font-bold focus:outline-hidden focus:border-[#C5A059]"
+                        placeholder="65000"
+                      />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 font-bold pointer-events-none">
+                        ₹
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="font-semibold text-stone-700">Original Retail (₹)</label>
-                    <input
-                      type="number"
-                      value={formData.originalPrice}
-                      onChange={(e) => setFormData({ ...formData, originalPrice: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono focus:outline-hidden"
-                    />
+                  <div className="space-y-1 flex flex-col justify-end">
+                    <label className="flex items-center space-x-2.5 p-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 cursor-pointer hover:bg-[#FAF3E0] transition">
+                      <input
+                        type="checkbox"
+                        checked={formData.inStock}
+                        onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
+                        className="accent-[#C5A059] w-4 h-4 rounded cursor-pointer"
+                      />
+                      <span className="font-semibold text-stone-800 text-xs">
+                        In Stock (Showroom Dispatch)
+                      </span>
+                    </label>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION 3: CLOUDINARY PRODUCT IMAGE UPLOAD & STRING URL STORAGE */}
-              <div className="space-y-4">
-                <div className="border-b border-[#F0EAE1] pb-2 flex items-center justify-between">
+              {/* SECTION 2: MULTIPLE PRODUCT GALLERY IMAGES */}
+              <div className="space-y-3 pt-2">
+                <div className="border-b border-[#F0EAE1] pb-1.5 flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Cloud className="w-4 h-4 text-sky-600" />
+                    <ImageIcon className="w-4 h-4 text-[#8F6D2C]" />
                     <h4 className="font-bold text-[#8F6D2C] uppercase tracking-wider text-xs">
-                      3. Cloudinary Product Images (Stored as String URLs)
+                      2. Product Gallery Images
                     </h4>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsCloudinaryModalOpen(true)}
-                      className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline flex items-center space-x-1"
-                    >
-                      <span>Cloudinary Settings</span>
-                    </button>
-                    <span className="text-[10px] text-stone-400 font-normal">
-                      {formData.images.length} photo(s)
-                    </span>
-                  </div>
+                  <span className="text-[10px] text-stone-600 font-semibold px-2.5 py-0.5 rounded-full bg-[#FAF3E0] border border-[#DEC9A2]">
+                    {formData.images.length} photo(s) added
+                  </span>
                 </div>
 
-                {/* Direct Cloudinary Upload Area */}
-                <div className="rounded-2xl border-2 border-dashed border-[#C5A059]/40 bg-[#FAF7F0] p-4 text-center hover:border-[#8F6D2C] transition relative group">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={isUploadingImage}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleUploadFileToCloudinary(file);
-                        e.target.value = "";
-                      }
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
-                  />
-                  <div className="flex flex-col items-center justify-center space-y-2 pointer-events-none">
-                    <div className="w-12 h-12 rounded-full bg-white shadow-xs border border-[#DEC9A2] flex items-center justify-center text-[#8F6D2C] group-hover:scale-105 transition-transform">
-                      {isUploadingImage ? (
-                        <div className="w-5 h-5 border-2 border-[#8F6D2C] border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <UploadCloud className="w-6 h-6 text-[#8F6D2C]" />
-                      )}
+                <p className="text-[11px] text-stone-500">
+                  Add photos for the product (front view, model wear, close-up details). The 1st photo is used as the primary cover photo.
+                </p>
+
+                {/* Multiple Images Upload & Paste Area (2 Options: Browse/Drop OR Ctrl+V Paste) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Option 1: Browse or Drag & Drop */}
+                  <div className="rounded-2xl border-2 border-dashed border-[#C5A059]/40 bg-[#FAF7F0] p-4 text-center hover:border-[#8F6D2C] transition relative group flex flex-col items-center justify-center min-h-[140px]">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      disabled={isUploadingImage}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          handleUploadMultipleFiles(e.target.files, "image");
+                          e.target.value = "";
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+                    />
+                    <div className="flex flex-col items-center justify-center space-y-1.5 pointer-events-none">
+                      <div className="w-11 h-11 rounded-full bg-white shadow-xs border border-[#DEC9A2] flex items-center justify-center text-[#8F6D2C] group-hover:scale-105 transition-transform">
+                        {isUploadingImage ? (
+                          <div className="w-5 h-5 border-2 border-[#8F6D2C] border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <UploadCloud className="w-6 h-6 text-[#8F6D2C]" />
+                        )}
+                      </div>
+                      <p className="font-bold text-xs text-stone-800">
+                        Browse or Drag &amp; Drop
+                      </p>
+                      <p className="text-[10px] text-stone-500">
+                        Select multiple PNG, JPG, WebP files
+                      </p>
                     </div>
-                    {isUploadingImage ? (
-                      <div>
-                        <p className="font-bold text-xs text-sky-900">{uploadProgressText || "Uploading to Cloudinary..."}</p>
-                        <p className="text-[11px] text-stone-500">Generating permanent CDN secure string URL...</p>
+                  </div>
+
+                  {/* Option 2: Paste from Clipboard (Ctrl + V) */}
+                  <div
+                    tabIndex={0}
+                    onPaste={handleClipboardPaste}
+                    onClick={handlePasteButtonClick}
+                    className="rounded-2xl border-2 border-dashed border-[#DFBA73] bg-gradient-to-br from-[#FFFDF8] to-[#FAF3E0] p-4 text-center hover:border-[#8F6D2C] hover:shadow-sm focus:outline-hidden focus:ring-2 focus:ring-[#C5A059] transition relative cursor-pointer flex flex-col items-center justify-center min-h-[140px] group"
+                    title="Click here and press Ctrl + V to paste copied images directly to Cloudinary"
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-1.5">
+                      <div className="w-11 h-11 rounded-full bg-white shadow-xs border border-[#DEC9A2] flex items-center justify-center text-[#8F6D2C] group-hover:scale-105 transition-transform">
+                        {isUploadingImage ? (
+                          <div className="w-5 h-5 border-2 border-[#8F6D2C] border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <ClipboardPaste className="w-6 h-6 text-[#8F6D2C]" />
+                        )}
                       </div>
-                    ) : (
-                      <div>
-                        <p className="font-bold text-xs text-stone-800">
-                          Click or Drag Jewellery Image to Upload to Cloudinary
-                        </p>
-                        <p className="text-[11px] text-stone-500 mt-0.5">
-                          Uploads directly to Cloudinary and returns a permanent HTTPS string URL
-                        </p>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-bold text-xs text-stone-900">
+                          Paste Image
+                        </span>
+                        <kbd className="px-2 py-0.5 rounded bg-white border border-[#DFC9A2] text-[10px] font-mono font-bold text-[#8F6D2C] shadow-2xs">
+                          Ctrl + V
+                        </kbd>
                       </div>
-                    )}
+                      <p className="text-[10px] text-stone-600">
+                        {isUploadingImage ? (uploadProgressText || "Uploading to Cloudinary...") : "Copy screenshot or image, click & press Ctrl+V"}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Or Paste Existing Cloudinary String URL */}
-                <div className="space-y-1.5">
+                {/* Or Paste Direct Image URL String */}
+                <div className="space-y-1.5 pt-1">
                   <label className="font-semibold text-stone-700 flex items-center justify-between text-xs">
-                    <span>Or Paste Cloudinary / Image URL String</span>
-                    <span className="text-[10px] font-normal text-stone-400">
-                      Direct https:// URL string
-                    </span>
+                    <span>Or Paste Direct Image Link</span>
+                    <span className="text-[10px] font-normal text-stone-400">Direct https:// image URL</span>
                   </label>
                   <div className="flex space-x-2">
                     <div className="relative flex-1">
@@ -1116,7 +1410,7 @@ export default function AdminDashboardPage() {
                             handleAddImageUrl();
                           }
                         }}
-                        placeholder="https://res.cloudinary.com/.../image/upload/..."
+                        placeholder="https://example.com/jewellery-photo.jpg"
                         className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden text-xs font-mono"
                       />
                     </div>
@@ -1125,111 +1419,256 @@ export default function AdminDashboardPage() {
                       onClick={handleAddImageUrl}
                       className="px-4 py-2 bg-[#FAF3E0] hover:bg-[#8F6D2C] text-[#8F6D2C] hover:text-white border border-[#DEC9A2] rounded-xl font-bold uppercase tracking-wider text-xs transition shrink-0 cursor-pointer"
                     >
-                      Add URL
+                      + Add Photo
                     </button>
                   </div>
                 </div>
 
-                {/* Stored Cloudinary String URLs List */}
+                {/* Multiple Uploaded Gallery Images Thumbnails Grid */}
                 {formData.images.length > 0 && (
-                  <div className="space-y-2 pt-1">
+                  <div className="space-y-2 pt-2">
                     <span className="text-[11px] font-bold text-stone-700 uppercase tracking-wider block">
-                      Uploaded Images ({formData.images.length})
+                      Gallery Photos ({formData.images.length})
                     </span>
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                       {formData.images.map((imgUrl, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between p-2 rounded-xl bg-[#FAF9F5] border border-stone-200 gap-3"
+                          className="relative rounded-2xl bg-white border border-stone-200 overflow-hidden shadow-2xs group flex flex-col justify-between p-2"
                         >
-                          <div className="flex items-center space-x-3 min-w-0 flex-1">
-                            <div className="w-12 h-12 rounded-lg bg-stone-100 border border-stone-300 overflow-hidden shrink-0">
-                              <img src={imgUrl} alt="" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center space-x-1.5">
-                                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200">
-                                  {imgUrl.includes("cloudinary.com") ? "Cloudinary CDN" : "Image URL"}
-                                </span>
-                                {idx === 0 && (
-                                  <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
-                                    Primary Cover
-                                  </span>
-                                )}
-                              </div>
-                              <p className="font-mono text-[10px] text-stone-600 truncate mt-0.5" title={imgUrl}>
-                                {imgUrl}
-                              </p>
-                            </div>
+                          <div className="aspect-square w-full rounded-xl overflow-hidden bg-[#FAF9F5] flex items-center justify-center p-1">
+                            <img src={imgUrl} alt="" className="w-full h-full object-contain" />
                           </div>
-                          <div className="flex items-center space-x-1.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(imgUrl);
-                                setCopiedImageUrl(imgUrl);
-                                setTimeout(() => setCopiedImageUrl(null), 2000);
-                              }}
-                              className="p-1.5 rounded-lg border border-stone-300 hover:bg-stone-200 text-stone-700 transition"
-                              title="Copy URL string"
-                            >
-                              {copiedImageUrl === imgUrl ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveImage(idx)}
-                              className="p-1.5 rounded-lg border border-rose-200 hover:bg-rose-100 text-rose-600 transition"
-                              title="Delete photo"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+
+                          <div className="pt-2 flex items-center justify-between gap-1">
+                            {idx === 0 ? (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
+                                ★ Cover
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSetCoverImage(idx)}
+                                className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-amber-100 text-stone-600 hover:text-amber-900 transition cursor-pointer"
+                                title="Set as primary cover photo"
+                              >
+                                Set Cover
+                              </button>
+                            )}
+
+                            <div className="flex items-center space-x-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(imgUrl);
+                                  setCopiedImageUrl(imgUrl);
+                                  setTimeout(() => setCopiedImageUrl(null), 2000);
+                                }}
+                                className="p-1 rounded-md hover:bg-stone-100 text-stone-500 hover:text-stone-800 transition cursor-pointer"
+                                title="Copy URL"
+                              >
+                                {copiedImageUrl === imgUrl ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(idx)}
+                                className="p-1 rounded-md hover:bg-rose-100 text-rose-500 hover:text-rose-700 transition cursor-pointer"
+                                title="Remove photo"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+              </div>
 
-                {/* Product In Stock Checkbox */}
-                <div className="pt-2 border-t border-[#F0EAE1]">
-                  <label className="flex items-center space-x-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.inStock}
-                      onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
-                      className="accent-[#C5A059] w-4 h-4 rounded cursor-pointer"
-                    />
-                    <span className="font-bold text-stone-800 text-xs">
-                      Product In Stock (Immediate Showroom Dispatch)
+              {/* SECTION 3: PRODUCT DESCRIPTION & DEDICATED LEFT-SIDE DESCRIPTION IMAGE */}
+              <div className="space-y-4 pt-2">
+                <div className="border-b border-[#F0EAE1] pb-1.5 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="w-4 h-4 text-[#8F6D2C]" />
+                    <h4 className="font-bold text-[#8F6D2C] uppercase tracking-wider text-xs">
+                      3. Product Description &amp; Left-Side Image
+                    </h4>
+                  </div>
+                </div>
+
+                {/* Dedicated Left-Side Description Image Uploader */}
+                <div className="bg-[#FAF9F5] border border-[#DEC9A2] rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h5 className="font-serif font-bold text-stone-900 text-sm flex items-center space-x-2">
+                        <span>Description Section Left-Side Image</span>
+                        <span className="text-[10px] font-sans font-bold px-2 py-0.5 rounded-full bg-[#FAF3E0] text-[#8F6D2C] uppercase">
+                          Editorial Photo
+                        </span>
+                      </h5>
+                      <p className="text-[11px] text-stone-500 mt-0.5">
+                        This specific photo appears on the left side of the <em>Product Description &amp; Specifications</em> accordion section on the product detail page.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                    {/* Image Preview Box */}
+                    <div className="sm:col-span-4 flex flex-col items-center justify-center">
+                      <div className="w-36 h-36 rounded-2xl border-2 border-dashed border-[#C5A059]/40 bg-white overflow-hidden flex items-center justify-center p-2 relative group shadow-2xs">
+                        {formData.descriptionImage ? (
+                          <>
+                            <img
+                              src={formData.descriptionImage}
+                              alt="Description Preview"
+                              className="w-full h-full object-contain"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, descriptionImage: "" });
+                                setDescImageInputUrl("");
+                              }}
+                              className="absolute top-2 right-2 p-1 rounded-full bg-rose-600 text-white shadow-md hover:scale-110 transition cursor-pointer"
+                              title="Remove description photo"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <div className="text-center p-2 text-stone-400">
+                            <ImageIcon className="w-8 h-8 mx-auto mb-1 text-stone-300" />
+                            <p className="text-[10px]">No editorial photo uploaded</p>
+                            <p className="text-[9px] text-stone-400">(Falls back to gallery)</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Description Image Upload Controls */}
+                    <div className="sm:col-span-8 space-y-3">
+                      {/* Direct Upload & Paste Buttons for Description Image */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploadingDescImage}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleUploadDescriptionImage(file);
+                                e.target.value = "";
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+                          />
+                          <button
+                            type="button"
+                            className="w-full py-2.5 px-3 rounded-xl border border-[#C5A059] bg-[#FAF3E0] hover:bg-[#8F6D2C] hover:text-white text-[#7A5B1F] font-bold text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-2xs"
+                          >
+                            {isUploadingDescImage ? (
+                              <>
+                                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                <span>Uploading...</span>
+                              </>
+                            ) : (
+                              <>
+                                <UploadCloud className="w-4 h-4" />
+                                <span>Browse Photo</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handlePasteDescriptionImage}
+                          className="w-full py-2.5 px-3 rounded-xl border border-[#DFBA73] bg-white hover:bg-[#FAF3E0] text-[#8F6D2C] font-bold text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-2xs"
+                          title="Paste image from clipboard (Ctrl + V)"
+                        >
+                          <ClipboardPaste className="w-4 h-4 text-[#8F6D2C]" />
+                          <span>Paste (Ctrl + V)</span>
+                        </button>
+                      </div>
+
+                      {/* Or Paste Description Image URL */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-stone-600">
+                          Or enter direct image URL:
+                        </label>
+                        <div className="flex space-x-2">
+                          <input
+                            type="url"
+                            value={descImageInputUrl}
+                            onChange={(e) => setDescImageInputUrl(e.target.value)}
+                            placeholder="https://example.com/editorial-photo.jpg"
+                            className="flex-1 px-3 py-2 rounded-xl bg-white border border-stone-300 text-stone-900 focus:outline-hidden text-xs font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (descImageInputUrl.trim()) {
+                                setFormData({
+                                  ...formData,
+                                  descriptionImage: descImageInputUrl.trim(),
+                                });
+                                showToast("Description left-side image set!");
+                              }
+                            }}
+                            className="px-3.5 py-2 rounded-xl bg-stone-800 text-white hover:bg-stone-900 text-xs font-bold transition cursor-pointer shrink-0"
+                          >
+                            Set Image
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description Textarea */}
+                <div className="space-y-1 pt-1">
+                  <label className="font-semibold text-stone-700 flex items-center justify-between text-xs">
+                    <span>Product Description &amp; Karigari Details (Optional)</span>
+                    <span className="text-[10px] text-stone-400 font-normal">
+                      Auto-generated if left blank
                     </span>
                   </label>
+                  <textarea
+                    rows={3}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Describe the craftsmanship inspiration, temple motifs, or purity details..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 focus:outline-hidden focus:border-[#C5A059] leading-relaxed"
+                  />
                 </div>
               </div>
 
-              {/* MODAL FOOTER */}
+              {/* FORM FOOTER */}
               <div className="pt-4 border-t border-[#E8DFC8] flex items-center justify-end space-x-3">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold uppercase tracking-wider text-xs"
+                  onClick={() => setAdminTab("inventory")}
+                  className="px-5 py-2.5 rounded-xl border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold uppercase tracking-wider text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-stone-950 font-bold uppercase tracking-wider text-xs shadow hover:brightness-105 transition"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-stone-950 font-bold uppercase tracking-wider text-xs shadow hover:brightness-105 transition cursor-pointer"
                 >
                   {editingProductId ? "Update Jewellery Specs" : "Save & Publish to Store"}
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </main>
 
       {/* 6. SUPABASE SETTINGS & SQL MODAL */}
       {isSupabaseModalOpen && (
@@ -1262,21 +1701,19 @@ export default function AdminDashboardPage() {
             <div className="flex border-b border-[#E8DFC8] bg-stone-50/50 px-6">
               <button
                 onClick={() => setActiveSupabaseTab("credentials")}
-                className={`py-3 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                  activeSupabaseTab === "credentials"
-                    ? "border-[#8F6D2C] text-[#8F6D2C]"
-                    : "border-transparent text-stone-500 hover:text-stone-800"
-                }`}
+                className={`py-3 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition ${activeSupabaseTab === "credentials"
+                  ? "border-[#8F6D2C] text-[#8F6D2C]"
+                  : "border-transparent text-stone-500 hover:text-stone-800"
+                  }`}
               >
                 1. Project Credentials
               </button>
               <button
                 onClick={() => setActiveSupabaseTab("sql")}
-                className={`py-3 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                  activeSupabaseTab === "sql"
-                    ? "border-[#8F6D2C] text-[#8F6D2C]"
-                    : "border-transparent text-stone-500 hover:text-stone-800"
-                }`}
+                className={`py-3 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition ${activeSupabaseTab === "sql"
+                  ? "border-[#8F6D2C] text-[#8F6D2C]"
+                  : "border-transparent text-stone-500 hover:text-stone-800"
+                  }`}
               >
                 2. SQL Schema Setup (1-Click Copy)
               </button>
@@ -1324,11 +1761,10 @@ export default function AdminDashboardPage() {
 
                   {testResult && (
                     <div
-                      className={`p-3 rounded-xl border text-xs font-medium animate-fade-in ${
-                        testResult.success
-                          ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                          : "bg-rose-50 border-rose-300 text-rose-800"
-                      }`}
+                      className={`p-3 rounded-xl border text-xs font-medium animate-fade-in ${testResult.success
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                        : "bg-rose-50 border-rose-300 text-rose-800"
+                        }`}
                     >
                       {testResult.message}
                     </div>
@@ -1408,119 +1844,6 @@ export default function AdminDashboardPage() {
                 className="px-5 py-2 rounded-xl border border-stone-300 text-stone-700 font-bold text-xs uppercase tracking-wider"
               >
                 Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 5. CLOUDINARY CONFIGURATION MODAL */}
-      {isCloudinaryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#FFFDF9] border border-[#DEC9A2] rounded-3xl max-w-xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-[#E8DFC8] bg-[#FAF3E0] flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2.5 rounded-2xl bg-sky-100 text-sky-800 border border-sky-300">
-                  <Cloud className="w-5 h-5 text-sky-600" />
-                </div>
-                <div>
-                  <h3 className="font-serif font-bold text-lg text-stone-900">
-                    Cloudinary Media Storage Configuration
-                  </h3>
-                  <p className="text-xs text-stone-500">
-                    Store high-definition product images directly in Cloudinary and save their CDN string URLs.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCloudinaryModalOpen(false)}
-                className="text-stone-400 hover:text-stone-700 p-1 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-4 overflow-y-auto">
-              {/* Info Banner */}
-              <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 text-sky-950 text-xs flex items-start space-x-2.5">
-                <CheckCircle2 className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="font-bold">Permanent CDN URLs stored as Strings</p>
-                  <p className="text-[11px] text-sky-800">
-                    Every uploaded product image gets an optimized, fast HTTPS string URL (e.g. <code className="bg-sky-100 px-1 py-0.5 rounded text-sky-900 font-mono">https://res.cloudinary.com/...</code>) which is stored directly in your Supabase database.
-                  </p>
-                </div>
-              </div>
-
-              {/* Cloud Name */}
-              <div className="space-y-1">
-                <label className="font-semibold text-xs text-stone-800">
-                  Cloudinary Cloud Name *
-                </label>
-                <input
-                  type="text"
-                  value={cloudinaryCloudNameInput}
-                  onChange={(e) => setCloudinaryCloudNameInput(e.target.value)}
-                  placeholder="e.g. djx7890abc"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono text-xs focus:outline-hidden focus:border-sky-500"
-                />
-                <p className="text-[10px] text-stone-400">
-                  Found in your Cloudinary Dashboard under Account Details.
-                </p>
-              </div>
-
-              {/* Upload Preset */}
-              <div className="space-y-1">
-                <label className="font-semibold text-xs text-stone-800">
-                  Unsigned Upload Preset *
-                </label>
-                <input
-                  type="text"
-                  value={cloudinaryPresetInput}
-                  onChange={(e) => setCloudinaryPresetInput(e.target.value)}
-                  placeholder="e.g. yashraj_products or ml_default"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] border border-stone-300 text-stone-900 font-mono text-xs focus:outline-hidden focus:border-sky-500"
-                />
-                <p className="text-[10px] text-stone-400">
-                  Created under Cloudinary: <strong>Settings &gt; Upload &gt; Upload presets &gt; Add Preset</strong> (Signing Mode: <strong>Unsigned</strong>).
-                </p>
-              </div>
-
-              {/* Step by Step Help */}
-              <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-700 text-xs space-y-2">
-                <p className="font-bold text-[11px] uppercase tracking-wider text-[#8F6D2C]">
-                  How to get your free Cloudinary preset (1-Minute Guide):
-                </p>
-                <ol className="list-decimal list-inside space-y-1 text-[11px] text-stone-600">
-                  <li>Log in to <a href="https://console.cloudinary.com" target="_blank" rel="noreferrer" className="text-sky-700 underline font-semibold">cloudinary.com</a>.</li>
-                  <li>Copy your <strong>Cloud Name</strong> from the Dashboard home.</li>
-                  <li>Click the <strong>Settings (Gear Icon) &gt; Upload</strong> tab.</li>
-                  <li>Scroll down to <strong>Upload Presets</strong>, click <strong>Add upload preset</strong>.</li>
-                  <li>Change Signing Mode to <strong>Unsigned</strong> and click <strong>Save</strong>.</li>
-                  <li>Paste the Preset Name above and click Save Settings below!</li>
-                </ol>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 px-6 border-t border-[#E8DFC8] bg-[#FAF9F5] flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setIsCloudinaryModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 font-bold text-xs uppercase tracking-wider hover:bg-stone-100 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSaveCloudinarySettings}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white font-bold text-xs uppercase tracking-wider shadow transition cursor-pointer"
-              >
-                Save Cloudinary Settings
               </button>
             </div>
           </div>

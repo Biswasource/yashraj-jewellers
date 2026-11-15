@@ -2,12 +2,10 @@
 
 import React, { useState } from "react";
 import { SHOWROOMS } from "../data/products";
-import { useStore } from "../context/StoreContext";
-import { MapPin, Phone, Clock, Layers, Calendar, ExternalLink, Navigation } from "lucide-react";
+import { MapPin, Phone, Clock, Layers, ExternalLink, Navigation } from "lucide-react";
 
 export default function StoresShowroomSection() {
   const [selectedCity, setSelectedCity] = useState("All");
-  const { setIsAppointmentOpen } = useStore();
 
   const cities = ["All", "Bhubaneswar", "Cuttack", "Brahmapur", "New Delhi"];
 
@@ -93,22 +91,16 @@ export default function StoresShowroomSection() {
                 </div>
               </div>
 
-              <div className="pt-5 mt-4 border-t border-stone-100 flex items-center space-x-3">
-                <button
-                  onClick={() => setIsAppointmentOpen(true)}
-                  className="flex-1 py-2 px-3 rounded-lg bg-[#8F6D2C] hover:bg-[#745821] text-white font-semibold text-xs transition flex items-center justify-center space-x-1"
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Book VIP Visit</span>
-                </button>
+              <div className="pt-5 mt-4 border-t border-stone-100">
                 <a
                   href={store.mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 rounded-lg border border-stone-200 hover:border-[#8F6D2C] text-stone-700 hover:text-[#8F6D2C] transition"
+                  className="w-full py-2.5 px-3 rounded-lg bg-[#FAF3E0] hover:bg-[#8F6D2C] border border-[#DEC9A2] hover:border-[#8F6D2C] text-[#8F6D2C] hover:text-white font-semibold text-xs transition flex items-center justify-center space-x-2"
                   title="View on Google Maps"
                 >
-                  <Navigation className="w-4 h-4" />
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>View on Google Maps</span>
                 </a>
               </div>
             </div>

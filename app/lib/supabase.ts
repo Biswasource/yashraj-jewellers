@@ -92,7 +92,7 @@ export function isSupabaseConfigured(): boolean {
  * Convert frontend Product to database row (snake_case)
  */
 export function productToDb(product: Product): Record<string, any> {
-  return {
+  const payload: Record<string, any> = {
     id: product.id,
     name: product.name,
     code: product.code,
@@ -116,6 +116,10 @@ export function productToDb(product: Product): Record<string, any> {
     description: product.description || "",
     certification: product.certification || "Certified Authentic",
   };
+  if (product.descriptionImage) {
+    payload.description_image = product.descriptionImage;
+  }
+  return payload;
 }
 
 /**
@@ -146,6 +150,7 @@ export function dbToProduct(row: Record<string, any>): Product {
     images: Array.isArray(row.images) && row.images.length > 0
       ? row.images
       : ["https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80"],
+    descriptionImage: row.description_image ? String(row.description_image) : undefined,
     certification: String(row.certification || "Certified Authentic"),
   };
 }

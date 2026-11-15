@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Plus_Jakarta_Sans, Alex_Brush } from "next/font/google";
+import {
+  Playfair_Display,
+  Plus_Jakarta_Sans,
+  Alex_Brush,
+  Cormorant_Garamond,
+  Cinzel,
+} from "next/font/google";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -17,6 +23,20 @@ const jakarta = Plus_Jakarta_Sans({
 const alexBrush = Alex_Brush({
   weight: "400",
   variable: "--font-alex",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const cormorant = Cormorant_Garamond({
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const cinzel = Cinzel({
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-cinzel",
   subsets: ["latin"],
   display: "swap",
 });
@@ -63,7 +83,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${playfair.variable} ${jakarta.variable} ${alexBrush.variable}`}
+      className={`${playfair.variable} ${jakarta.variable} ${alexBrush.variable} ${cormorant.variable} ${cinzel.variable}`}
     >
       <body className="min-h-screen bg-white text-[#111827] font-sans antialiased selection:bg-[#D4AF37]/20 selection:text-[#59420D]">
         <ClientProviders>{children}</ClientProviders>

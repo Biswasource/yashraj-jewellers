@@ -2,21 +2,17 @@
 
 import React, { useState } from "react";
 import { useStore } from "../context/StoreContext";
-import { X, Calendar, Video, MapPin, CheckCircle2, Clock, Sparkles } from "lucide-react";
+import { X, Calendar, Video, CheckCircle2, Clock } from "lucide-react";
 
 export default function AppointmentModal() {
   const {
-    isAppointmentOpen,
-    setIsAppointmentOpen,
     isVideoCallOpen,
     setIsVideoCallOpen,
     showToast,
   } = useStore();
 
-  const isOpen = isAppointmentOpen || isVideoCallOpen;
-  const initialMode = isVideoCallOpen ? "video" : "store";
+  const isOpen = isVideoCallOpen;
 
-  const [bookingMode, setBookingMode] = useState<"store" | "video">(initialMode);
   const [storeLocation, setStoreLocation] = useState("Bhubaneswar Master Canteen Flagship");
   const [preferredDate, setPreferredDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("Evening (5:00 PM - 8:00 PM)");
@@ -35,14 +31,13 @@ export default function AppointmentModal() {
       showToast("Please provide your name and phone number.");
       return;
     }
-    const ref = `YJ-VIP-${Math.floor(1000 + Math.random() * 9000)}`;
+    const ref = `YJ-VID-${Math.floor(1000 + Math.random() * 9000)}`;
     setBookingRef(ref);
     setIsBooked(true);
-    showToast("Appointment confirmed! You will receive confirmation details on WhatsApp.");
+    showToast("Live Video Shopping appointment confirmed! Details sent on WhatsApp.");
   };
 
   const handleClose = () => {
-    setIsAppointmentOpen(false);
     setIsVideoCallOpen(false);
     setIsBooked(false);
   };
@@ -52,11 +47,9 @@ export default function AppointmentModal() {
       <div className="bg-white text-stone-900 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl border border-stone-200 my-auto">
         <div className="flex items-center justify-between pb-4 border-b border-[#E8DFC8]">
           <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-[#8F6D2C]" />
+            <Video className="w-5 h-5 text-[#8F6D2C]" />
             <h3 className="font-serif font-bold text-xl text-stone-900">
-              {bookingMode === "video"
-                ? "Schedule Live Video Shopping"
-                : "Book VIP Showroom Visit"}
+              Schedule Live Video Shopping
             </h3>
           </div>
           <button
@@ -69,34 +62,6 @@ export default function AppointmentModal() {
 
         {!isBooked ? (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-xs">
-            {/* Mode Selector */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setBookingMode("store")}
-                className={`py-2.5 px-3 rounded-xl border flex items-center justify-center space-x-2 transition ${
-                  bookingMode === "store"
-                    ? "border-[#8F6D2C] bg-[#FAF3E0] text-[#8F6D2C] font-bold shadow-xs"
-                    : "border-stone-200 bg-white text-stone-700"
-                }`}
-              >
-                <MapPin className="w-4 h-4" />
-                <span>Showroom Visit</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setBookingMode("video")}
-                className={`py-2.5 px-3 rounded-xl border flex items-center justify-center space-x-2 transition ${
-                  bookingMode === "video"
-                    ? "border-[#8F6D2C] bg-[#FAF3E0] text-[#8F6D2C] font-bold shadow-xs"
-                    : "border-stone-200 bg-white text-stone-700"
-                }`}
-              >
-                <Video className="w-4 h-4" />
-                <span>HD Video Call</span>
-              </button>
-            </div>
 
             {/* Showroom */}
             <div>
@@ -234,7 +199,7 @@ export default function AppointmentModal() {
           <div className="text-center py-8 space-y-4">
             <CheckCircle2 className="w-14 h-14 text-emerald-600 mx-auto" />
             <h4 className="font-serif font-bold text-xl text-stone-900">
-              VIP Appointment Reserved!
+              Live Video Appointment Reserved!
             </h4>
             <div className="p-4 bg-white rounded-2xl border border-stone-200 text-xs text-stone-600 space-y-1.5 text-left">
               <div className="flex justify-between">
@@ -246,10 +211,8 @@ export default function AppointmentModal() {
                 <strong className="text-stone-900">{name}</strong>
               </div>
               <div className="flex justify-between">
-                <span>Location / Mode:</span>
-                <strong className="text-stone-900">
-                  {bookingMode === "video" ? "HD Video Shopping Call" : storeLocation}
-                </strong>
+                <span>Mode:</span>
+                <strong className="text-stone-900">HD Video Shopping Call</strong>
               </div>
               <div className="flex justify-between">
                 <span>Slot:</span>

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useStore } from "../context/StoreContext";
-import { CATEGORIES } from "../data/products";
+import { CATEGORIES, matchesProductSearch } from "../data/products";
 import {
   Heart,
   ShoppingBag,
@@ -23,6 +23,7 @@ import {
 export default function Navbar() {
   const router = useRouter();
   const {
+    products,
     cartCount,
     wishlist,
     setIsCartOpen,
@@ -38,6 +39,34 @@ export default function Navbar() {
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [navSearch, setNavSearch] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileSearchExpanded, setIsMobileSearchExpanded] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  const searchResults = useMemo(() => {
+    if (!navSearch.trim()) return [];
+    return products.filter((p) => matchesProductSearch(p, navSearch));
+  }, [navSearch, products]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsSearchOpen(false);
+        setIsMobileSearchExpanded(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -84,11 +113,13 @@ export default function Navbar() {
     }
   };
 
-  const handleNavSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleNavSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (navSearch.trim()) {
+      setIsSearchOpen(false);
+      setIsMobileSearchExpanded(false);
+      setIsMobileMenuOpen(false);
       router.push(`/products?search=${encodeURIComponent(navSearch.trim())}`);
-      setNavSearch("");
     }
   };
 
@@ -96,7 +127,7 @@ export default function Navbar() {
     <>
       <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-stone-200">
       {/* 2. MAIN BRAND HEADER */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-3 lg:gap-5">
         {/* Left Side: LOGO (Left Aligned with Round Emblem) */}
         <Link href="/" className="flex items-center space-x-2.5 sm:space-x-3.5 group text-left">
           <div className="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full overflow-hidden shadow-md border-2 border-[#C5A059]/60 group-hover:scale-105 transition-all duration-300 shrink-0 bg-[#072016]">
@@ -116,91 +147,9 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Center/Right Side: ACTIONS (Search, Wholesale Enquiry, Wishlist, Enquiry Bag, and Mobile Menu Toggle) */}
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          {/* Global Search Bar */}
-          <form
-            onSubmit={handleNavSearchSubmit}
-            className="hidden md:flex items-center relative w-44 lg:w-56"
-          >
-            <input
-              type="text"
-              value={navSearch}
-              onChange={(e) => setNavSearch(e.target.value)}
-              placeholder="Search catalogue..."
-              className="w-full pl-8 pr-3 py-1.5 rounded-full bg-[#FAF9F5] border border-[#DEC9A2] text-xs text-stone-900 placeholder-stone-400 focus:outline-hidden focus:border-[#C5A059] focus:w-64 transition-all duration-300"
-            />
-            <Search className="w-3.5 h-3.5 text-[#8F6D2C] absolute left-2.5 pointer-events-none" />
-          </form>
-
-          {/* Mobile Search Button */}
-          <Link
-            href="/products"
-            className="md:hidden p-2 text-stone-800 hover:text-[#C5A059] transition-colors"
-            aria-label="Search Jewellery"
-            title="Search Catalogue"
-          >
-            <Search className="w-5 h-5" />
-          </Link>
-
-          {/* Wholesale Trade Partner CTA */}
-          <button
-            onClick={() => {
-              const text = encodeURIComponent(
-                "Namaste Yashraj Jewellers! I am interested in wholesale jewellery collections, trade pricing, and catalogue for my business."
-              );
-              window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
-            }}
-            className="hidden lg:inline-flex items-center space-x-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border border-[#C5A059] text-[#7A5B1F] bg-[#FAF3E0] hover:bg-[#C5A059] hover:text-white transition shadow-xs"
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Wholesale Enquiry</span>
-          </button>
-
-          {/* Wishlist */}
-          <button
-            onClick={() => setIsWishlistOpen(true)}
-            className="relative p-2 text-stone-800 hover:text-[#C5A059] transition-colors"
-            aria-label="View Wishlist"
-          >
-            <Heart className="w-5 h-5 sm:w-6 sm:h-6" />
-            {wishlist.length > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#9E7B35] text-white text-[10px] font-bold flex items-center justify-center">
-                {wishlist.length}
-              </span>
-            )}
-          </button>
-
-          {/* Enquiry Bag */}
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative p-2 text-stone-800 hover:text-[#C5A059] transition-colors"
-            aria-label="View Enquiry Bag"
-            title="View Enquiry Bag"
-          >
-            <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
-            {cartCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#8F6D2C] text-white text-[10px] font-bold flex items-center justify-center animate-bounce">
-                {cartCount}
-              </span>
-            )}
-          </button>
-
-          {/* Mobile menu toggle (Right side on mobile) */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-stone-800 hover:text-[#C5A059] transition-colors focus:outline-hidden"
-            aria-label="Toggle Navigation Menu"
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
-
-      {/* 3. DESKTOP NAVIGATION BAR (Exact Match to User Reference) */}
-      <nav className="hidden lg:block border-t border-stone-200 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <ul className="flex items-center space-x-7 sm:space-x-8 text-[13px] font-medium text-stone-700">
+                {/* Center: DESKTOP NAVIGATION DIRECTLY IN HEADER */}
+        <nav className="hidden lg:flex items-center">
+          <ul className="flex items-center space-x-4 xl:space-x-6 text-[13px] font-semibold text-stone-700">
             {/* 1. All Jewellery ∨ */}
             <li
               className="relative group py-3 cursor-pointer"
@@ -217,7 +166,7 @@ export default function Navbar() {
 
               {/* Mega Dropdown */}
               {activeDropdown === "all" && (
-                <div className="absolute left-0 top-full w-[820px] bg-white border border-[#E8DFC8] shadow-2xl rounded-b-xl p-6 grid grid-cols-4 gap-6 animate-fade-in z-50 text-stone-700">
+                <div className="absolute left-0 top-full w-[760px] max-w-[85vw] bg-white border border-[#E8DFC8] shadow-2xl rounded-b-xl p-6 grid grid-cols-4 gap-6 animate-fade-in z-50 text-stone-700">
                   {/* Col 1: Categories */}
                   <div>
                     <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#9E7B35] border-b border-[#F0E6D2] pb-2 mb-3">
@@ -344,7 +293,7 @@ export default function Navbar() {
                       </p>
                     </div>
                     <button
-                      onClick={() => handleCategoryClick("necklaces")}
+                      onClick={() => handleCategoryClick("all")}
                       className="mt-3 text-[11px] font-bold text-[#8F6D2C] underline uppercase tracking-wider text-left"
                     >
                       Explore Collection →
@@ -400,51 +349,7 @@ export default function Navbar() {
               )}
             </li>
 
-            {/* 3. Diamond ∨ */}
-            <li
-              className="relative group py-3 cursor-pointer"
-              onMouseEnter={() => setActiveDropdown("diamond")}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <button
-                onClick={() => handleMetalClick("diamond")}
-                className="flex items-center space-x-1.5 hover:text-[#9E7B35] transition-colors py-1 text-stone-800"
-              >
-                <span>Diamond</span>
-                <ChevronDown className="w-3.5 h-3.5 text-stone-400 group-hover:text-[#9E7B35] group-hover:rotate-180 transition-transform duration-200" />
-              </button>
 
-              {activeDropdown === "diamond" && (
-                <div className="absolute left-0 top-full w-64 bg-white border border-[#E8DFC8] shadow-2xl rounded-b-xl py-3 px-2 z-50 animate-fade-in text-stone-700">
-                  <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#9E7B35] border-b border-[#F0E6D2] mb-1">
-                    Natural Solitaires
-                  </div>
-                  <ul className="text-xs space-y-1">
-                    {[
-                      { label: "Solitaire Engagement Rings", action: () => handleCategoryClick("rings") },
-                      { label: "Diamond Chokers & Necklaces", action: () => handleCategoryClick("necklaces") },
-                      { label: "Solitaire Studs & Tops", action: () => handleCategoryClick("earrings") },
-                      { label: "Diamond Daily Wear Bands", action: () => handleCategoryClick("rings") },
-                      { label: "VVS-EF Natural Solitaires", action: () => handleMetalClick("diamond") },
-                      { label: "Bridal Diamond Sets", action: () => handleOccasionClick("wedding") },
-                      { label: "IGI Certified Solitaires", action: () => handleMetalClick("diamond") },
-                    ].map((item, idx) => (
-                      <li key={idx}>
-                        <button
-                          onClick={() => {
-                            item.action();
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full text-left px-3 py-1.5 rounded hover:bg-[#FAF3E0] hover:text-[#8F6D2C] transition-colors"
-                        >
-                          {item.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </li>
 
             {/* 4. Silver ∨ */}
             <li
@@ -491,50 +396,7 @@ export default function Navbar() {
               )}
             </li>
 
-            {/* 5. Gifting ∨ */}
-            <li
-              className="relative group py-3 cursor-pointer"
-              onMouseEnter={() => setActiveDropdown("gifting")}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <button
-                onClick={() => handleOccasionClick("festive")}
-                className="flex items-center space-x-1.5 hover:text-[#9E7B35] transition-colors py-1 text-stone-800"
-              >
-                <span>Gifting</span>
-                <ChevronDown className="w-3.5 h-3.5 text-stone-400 group-hover:text-[#9E7B35] group-hover:rotate-180 transition-transform duration-200" />
-              </button>
 
-              {activeDropdown === "gifting" && (
-                <div className="absolute left-0 top-full w-64 bg-white border border-[#E8DFC8] shadow-2xl rounded-b-xl py-3 px-2 z-50 animate-fade-in text-stone-700">
-                  <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#9E7B35] border-b border-[#F0E6D2] mb-1">
-                    Precious Gifts & Keepsakes
-                  </div>
-                  <ul className="text-xs space-y-1">
-                    {[
-                      { label: "Wedding & Vivaha Gifts", action: () => handleOccasionClick("wedding") },
-                      { label: "Anniversary Keepsakes", action: () => handleCategoryClick("rings") },
-                      { label: "Birthday & Milestones", action: () => handleCategoryClick("earrings") },
-                      { label: "Gifts Under ₹10,000", action: () => handleCategoryClick("all") },
-                      { label: "Gifts ₹10,000 - ₹25,000", action: () => handleCategoryClick("all") },
-                      { label: "Gold & Silver Gift Coins", action: () => handleCategoryClick("coins") },
-                    ].map((item, idx) => (
-                      <li key={idx}>
-                        <button
-                          onClick={() => {
-                            item.action();
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full text-left px-3 py-1.5 rounded hover:bg-[#FAF3E0] hover:text-[#8F6D2C] transition-colors"
-                        >
-                          {item.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </li>
 
             {/* 6. More ∨ */}
             <li
@@ -554,7 +416,7 @@ export default function Navbar() {
               </button>
 
               {activeDropdown === "more" && (
-                <div className="absolute left-0 top-full w-72 bg-white border border-[#E8DFC8] shadow-2xl rounded-b-xl py-3 px-2 z-50 animate-fade-in text-stone-700">
+                <div className="absolute right-0 top-full w-72 bg-white border border-[#E8DFC8] shadow-2xl rounded-b-xl py-3 px-2 z-50 animate-fade-in text-stone-700">
                   <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#9E7B35] border-b border-[#F0E6D2] mb-1">
                     Discover Yashraj
                   </div>
@@ -596,13 +458,6 @@ export default function Navbar() {
                         },
                       },
                       {
-                        label: "Book Showroom Visit",
-                        action: () => {
-                          setActiveDropdown(null);
-                          setIsAppointmentOpen(true);
-                        },
-                      },
-                      {
                         label: "Live Video Shopping Call",
                         action: () => {
                           setActiveDropdown(null);
@@ -624,8 +479,250 @@ export default function Navbar() {
               )}
             </li>
           </ul>
+        </nav>
+
+        {/* Center/Right Side: ACTIONS (Search, Wholesale Enquiry, Wishlist, Enquiry Bag, and Mobile Menu Toggle) */}
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Global Search Bar (Desktop & Tablet with live interactive suggestions) */}
+          <div ref={searchContainerRef} className="hidden md:block relative">
+            <form
+              onSubmit={handleNavSearchSubmit}
+              className="flex items-center relative w-44 lg:w-56 xl:w-72"
+            >
+              <input
+                type="text"
+                value={navSearch}
+                onChange={(e) => {
+                  setNavSearch(e.target.value);
+                  setIsSearchOpen(true);
+                }}
+                onFocus={() => setIsSearchOpen(true)}
+                placeholder="Search gold, diamond, jhumka..."
+                className="w-full pl-8 pr-8 py-1.5 rounded-full bg-[#FAF9F5] border border-[#DEC9A2] text-xs text-stone-900 placeholder-stone-400 focus:outline-hidden focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] focus:bg-white transition-all shadow-2xs"
+              />
+              <Search className="w-3.5 h-3.5 text-[#8F6D2C] absolute left-2.5 pointer-events-none" />
+              {navSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavSearch("");
+                    setIsSearchOpen(false);
+                  }}
+                  className="absolute right-2.5 p-0.5 text-stone-400 hover:text-stone-700 cursor-pointer"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </form>
+
+            {/* Live Autocomplete Dropdown */}
+            {isSearchOpen && navSearch.trim().length > 0 && (
+              <div className="absolute right-0 top-full mt-2 w-80 lg:w-96 bg-white border border-[#E8DFC8] rounded-2xl shadow-2xl p-3 z-50 animate-fade-in text-stone-800">
+                <div className="flex items-center justify-between pb-2 border-b border-stone-100 px-1 text-[11px] font-semibold text-stone-500">
+                  <span>Matching Jewellery ({searchResults.length})</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsSearchOpen(false)}
+                    className="hover:text-stone-900 cursor-pointer text-[10px]"
+                  >
+                    Close ✕
+                  </button>
+                </div>
+
+                {searchResults.length > 0 ? (
+                  <div className="divide-y divide-stone-100 max-h-72 overflow-y-auto pt-1">
+                    {searchResults.slice(0, 5).map((p) => (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setIsSearchOpen(false);
+                          setNavSearch("");
+                          router.push(`/products/${p.id}`);
+                        }}
+                        className="py-2 px-1.5 hover:bg-[#FAF8F5] rounded-xl flex items-center space-x-3 cursor-pointer transition-colors"
+                      >
+                        <img
+                          src={p.images[0]}
+                          alt={p.name}
+                          className="w-10 h-10 object-contain rounded-md bg-[#FBF9F6] p-0.5 shrink-0"
+                        />
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="font-serif text-xs font-semibold text-stone-900 truncate">
+                            {p.name}
+                          </p>
+                          <p className="text-[10px] text-stone-500">
+                            {p.metal.toUpperCase()} • {p.purity}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-bold text-stone-900">
+                            ₹{p.price.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="pt-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleNavSearchSubmit()}
+                        className="w-full py-2 bg-[#FAF3E0] hover:bg-[#C5A059] text-[#7A5B1F] hover:text-white rounded-xl text-xs font-bold text-center transition flex items-center justify-center space-x-1 cursor-pointer"
+                      >
+                        <span>View all {searchResults.length} results</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-6 text-center text-xs text-stone-500">
+                    <p>No products found for &ldquo;{navSearch}&rdquo;.</p>
+                    <p className="text-[11px] text-stone-400 mt-1">
+                      Try searching <em>jhumka</em>, <em>necklace</em>, <em>22k</em>, or <em>gold</em>.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Search Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileSearchExpanded(!isMobileSearchExpanded)}
+            className="md:hidden p-2 text-stone-800 hover:text-[#C5A059] transition-colors cursor-pointer"
+            aria-label="Toggle Mobile Search"
+            title="Search Jewellery"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+
+          {/* Wholesale Trade Partner CTA */}
+          <button
+            onClick={() => {
+              const text = encodeURIComponent(
+                "Namaste Yashraj Jewellers! I am interested in wholesale jewellery collections, trade pricing, and catalogue for my business."
+              );
+              window.open(`https://wa.me/917008343796?text=${text}`, "_blank");
+            }}
+            className="hidden xl:inline-flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-[#C5A059] text-[#7A5B1F] bg-[#FAF3E0] hover:bg-[#C5A059] hover:text-white transition shadow-xs"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Wholesale Enquiry</span>
+          </button>
+
+          {/* Wishlist */}
+          <button
+            onClick={() => setIsWishlistOpen(true)}
+            className="relative p-2 text-stone-800 hover:text-[#C5A059] transition-colors"
+            aria-label="View Wishlist"
+          >
+            <Heart className="w-5 h-5 sm:w-6 sm:h-6" />
+            {wishlist.length > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#9E7B35] text-white text-[10px] font-bold flex items-center justify-center">
+                {wishlist.length}
+              </span>
+            )}
+          </button>
+
+          {/* Enquiry Bag */}
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="relative p-2 text-stone-800 hover:text-[#C5A059] transition-colors"
+            aria-label="View Enquiry Bag"
+            title="View Enquiry Bag"
+          >
+            <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
+            {cartCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#8F6D2C] text-white text-[10px] font-bold flex items-center justify-center animate-bounce">
+                {cartCount}
+              </span>
+            )}
+          </button>
+
+          {/* Mobile menu toggle (Right side on mobile) */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 text-stone-800 hover:text-[#C5A059] transition-colors focus:outline-hidden"
+            aria-label="Toggle Navigation Menu"
+          >
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-      </nav>
+      </div>
+
+      {/* Mobile Search Expandable Bar */}
+      {isMobileSearchExpanded && (
+        <div className="md:hidden bg-white border-t border-[#E8DFC8] px-4 py-3 shadow-md animate-fade-in">
+          <form onSubmit={handleNavSearchSubmit} className="relative flex items-center">
+            <input
+              type="text"
+              autoFocus
+              value={navSearch}
+              onChange={(e) => {
+                setNavSearch(e.target.value);
+                setIsSearchOpen(true);
+              }}
+              placeholder="Search jewellery, 22K, diamonds..."
+              className="w-full pl-9 pr-9 py-2 rounded-xl bg-[#FAF9F5] border border-[#DEC9A2] text-xs text-stone-900 placeholder-stone-400 focus:outline-hidden focus:border-[#C5A059]"
+            />
+            <Search className="w-4 h-4 text-[#8F6D2C] absolute left-3 pointer-events-none" />
+            {navSearch && (
+              <button
+                type="button"
+                onClick={() => setNavSearch("")}
+                className="absolute right-3 p-1 text-stone-400 hover:text-stone-700 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </form>
+
+          {/* Mobile search live suggestions */}
+          {navSearch.trim().length > 0 && (
+            <div className="mt-2 divide-y divide-stone-100 max-h-60 overflow-y-auto">
+              {searchResults.length > 0 ? (
+                <>
+                  {searchResults.slice(0, 4).map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        setIsMobileSearchExpanded(false);
+                        setNavSearch("");
+                        router.push(`/products/${p.id}`);
+                      }}
+                      className="py-2 flex items-center space-x-3 cursor-pointer"
+                    >
+                      <img
+                        src={p.images[0]}
+                        alt=""
+                        className="w-9 h-9 object-contain rounded bg-[#FBF9F6]"
+                      />
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-xs font-semibold text-stone-900 truncate">
+                          {p.name}
+                        </p>
+                        <p className="text-[10px] text-stone-500">₹{p.price.toLocaleString("en-IN")}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleNavSearchSubmit()}
+                    className="w-full mt-2 py-1.5 bg-[#FAF3E0] text-[#7A5B1F] text-xs font-bold rounded-lg text-center cursor-pointer"
+                  >
+                    View all {searchResults.length} results →
+                  </button>
+                </>
+              ) : (
+                <p className="py-3 text-center text-xs text-stone-500">
+                  No matching jewellery found.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </header>
 
     {/* 4. MOBILE SLIDE-IN RIGHT SIDEBAR MENU (Mounted outside header to guarantee supreme z-index above all hero banners and sections) */}
@@ -678,6 +775,39 @@ export default function Navbar() {
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Search Inside Mobile Drawer */}
+          <div className="p-3 bg-white border-b border-[#E8DFC8]">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (navSearch.trim()) {
+                  setIsMobileMenuOpen(false);
+                  router.push(`/products?search=${encodeURIComponent(navSearch.trim())}`);
+                  setNavSearch("");
+                }
+              }}
+              className="relative flex items-center"
+            >
+              <input
+                type="text"
+                value={navSearch}
+                onChange={(e) => setNavSearch(e.target.value)}
+                placeholder="Search jewellery catalogue..."
+                className="w-full pl-8 pr-7 py-2 rounded-xl bg-[#FAF9F5] border border-[#DEC9A2] text-xs text-stone-900 placeholder-stone-400 focus:outline-hidden focus:border-[#C5A059]"
+              />
+              <Search className="w-3.5 h-3.5 text-[#8F6D2C] absolute left-2.5 pointer-events-none" />
+              {navSearch && (
+                <button
+                  type="button"
+                  onClick={() => setNavSearch("")}
+                  className="absolute right-2 p-1 text-stone-400 hover:text-stone-700 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </form>
           </div>
 
           {/* Navigation Links with Expandable Accordions */}
@@ -751,39 +881,7 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* 3. Diamond */}
-            <div className="border-b border-[#E8DFC8]/60 pb-1.5">
-              <button
-                onClick={() => setMobileExpanded(mobileExpanded === "diamond" ? null : "diamond")}
-                className="flex items-center justify-between w-full py-2.5 text-left font-medium text-stone-800 hover:text-[#8F6D2C]"
-              >
-                <span className="text-sm">Diamond Solitaires</span>
-                <ChevronDown
-                  className={`w-4 h-4 text-stone-400 transition-transform duration-200 ${
-                    mobileExpanded === "diamond" ? "rotate-180 text-[#8F6D2C]" : ""
-                  }`}
-                />
-              </button>
-              {mobileExpanded === "diamond" && (
-                <div className="pl-3 pr-1 py-1 space-y-2 text-xs text-stone-600 bg-white rounded-lg p-2.5 mb-2 border border-stone-200/60">
-                  {[
-                    { label: "Solitaire Engagement Rings", action: () => handleCategoryClick("rings") },
-                    { label: "Diamond Chokers & Necklaces", action: () => handleCategoryClick("necklaces") },
-                    { label: "Solitaire Studs & Tops", action: () => handleCategoryClick("earrings") },
-                    { label: "VVS-EF Certified Solitaires", action: () => handleMetalClick("diamond") },
-                    { label: "Bridal Diamond Sets", action: () => handleOccasionClick("wedding") },
-                  ].map((sub, i) => (
-                    <button
-                      key={i}
-                      onClick={sub.action}
-                      className="block w-full text-left py-1 hover:text-[#8F6D2C]"
-                    >
-                      {sub.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+
 
             {/* 4. Silver */}
             <div className="border-b border-[#E8DFC8]/60 pb-1.5">
@@ -819,38 +917,7 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* 5. Gifting */}
-            <div className="border-b border-[#E8DFC8]/60 pb-1.5">
-              <button
-                onClick={() => setMobileExpanded(mobileExpanded === "gifting" ? null : "gifting")}
-                className="flex items-center justify-between w-full py-2.5 text-left font-medium text-stone-800 hover:text-[#8F6D2C]"
-              >
-                <span className="text-sm">Gifting</span>
-                <ChevronDown
-                  className={`w-4 h-4 text-stone-400 transition-transform duration-200 ${
-                    mobileExpanded === "gifting" ? "rotate-180 text-[#8F6D2C]" : ""
-                  }`}
-                />
-              </button>
-              {mobileExpanded === "gifting" && (
-                <div className="pl-3 pr-1 py-1 space-y-2 text-xs text-stone-600 bg-white rounded-lg p-2.5 mb-2 border border-stone-200/60">
-                  {[
-                    { label: "Wedding & Vivaha Gifts", action: () => handleOccasionClick("wedding") },
-                    { label: "Anniversary Keepsakes", action: () => handleCategoryClick("rings") },
-                    { label: "Birthday & Milestones", action: () => handleCategoryClick("earrings") },
-                    { label: "Gold & Silver Gift Coins", action: () => handleCategoryClick("coins") },
-                  ].map((sub, i) => (
-                    <button
-                      key={i}
-                      onClick={sub.action}
-                      className="block w-full text-left py-1 hover:text-[#8F6D2C]"
-                    >
-                      {sub.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+
 
             {/* 6. More */}
             <div className="border-b border-[#E8DFC8]/60 pb-1.5">
@@ -925,11 +992,11 @@ export default function Navbar() {
             <button
               onClick={() => {
                 setIsMobileMenuOpen(false);
-                setIsAppointmentOpen(true);
+                setIsVideoCallOpen(true);
               }}
               className="w-full py-2 rounded-xl border border-[#C5A059] text-[#7A5B1F] bg-[#FAF3E0] font-semibold text-xs uppercase tracking-wider text-center transition"
             >
-              Book Showroom Visit
+              Live Video Shopping Call
             </button>
           </div>
         </div>

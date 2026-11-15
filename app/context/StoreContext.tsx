@@ -87,8 +87,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [enquireProduct, setEnquireProduct] = useState<Product | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Products Inventory State (Initialized as empty to remove fake mock data)
-  const [products, setProducts] = useState<Product[]>([]);
+  // Products Inventory State (Initialized with default showroom catalogue so first load is instant)
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
   const [isSupabaseReady, setIsSupabaseReady] = useState<boolean>(false);
 
@@ -110,7 +110,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (configured) {
       try {
         const dbProducts = await fetchProductsFromSupabase();
-        if (dbProducts && Array.isArray(dbProducts)) {
+        if (dbProducts && Array.isArray(dbProducts) && dbProducts.length > 0) {
           setProducts(dbProducts);
           try {
             localStorage.setItem("yj_products", JSON.stringify(dbProducts));
@@ -128,25 +128,48 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const savedCustom = localStorage.getItem("yj_products");
       if (savedCustom) {
         const parsed = JSON.parse(savedCustom);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           // Filter out old fake demo items that start with yj-gld-001, yj-dia-002, etc.
           const realItems = parsed.filter(
             (p: Product) => !p.id.match(/^yj-(gld|dia|slv|bln|brd)-\d{3}$/)
           );
-          setProducts(realItems);
-          localStorage.setItem("yj_products", JSON.stringify(realItems));
+          if (realItems.length > 0) {
+            setProducts(realItems);
+            try {
+              localStorage.setItem("yj_products", JSON.stringify(realItems));
+            } catch {}
+            setIsLoadingProducts(false);
+            return;
+          }
         }
-      } else {
-        setProducts([]);
       }
     } catch {
-      setProducts([]);
+      // ignore
     }
+
+    // First time visitor fallback: default showroom catalogue
+    setProducts(PRODUCTS);
+    try {
+      localStorage.setItem("yj_products", JSON.stringify(PRODUCTS));
+    } catch {}
     setIsLoadingProducts(false);
   }, []);
 
   useEffect(() => {
     try {
+      const savedProducts = localStorage.getItem("yj_products");
+      if (savedProducts) {
+        const parsed = JSON.parse(savedProducts);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const realItems = parsed.filter(
+            (p: Product) => !p.id.match(/^yj-(gld|dia|slv|bln|brd)-\d{3}$/)
+          );
+          if (realItems.length > 0) {
+            setProducts(realItems);
+          }
+        }
+      }
+
       const savedCart = localStorage.getItem("yj_cart");
       if (savedCart) setCart(JSON.parse(savedCart));
       const savedWishlist = localStorage.getItem("yj_wishlist");
@@ -318,15 +341,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetProductsToDefault = () => {
-    setProducts([]);
+    setProducts(PRODUCTS);
     try {
-      localStorage.removeItem("yj_products");
+      localStorage.setItem("yj_products", JSON.stringify(PRODUCTS));
     } catch {}
-    showToast("Inventory cleared.");
+    showToast("Inventory restored to factory showroom default.");
   };
 
   const getProduct = (id: string): Product | undefined => {
-    return products.find(
+    const fromState = products.find(
+      (p) => p.id.toLowerCase() === id.toLowerCase() || p.code.toLowerCase() === id.toLowerCase()
+    );
+    if (fromState) return fromState;
+    return PRODUCTS.find(
       (p) => p.id.toLowerCase() === id.toLowerCase() || p.code.toLowerCase() === id.toLowerCase()
     );
   };

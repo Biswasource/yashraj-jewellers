@@ -27,8 +27,8 @@ export async function generateMetadata({
 
   if (!product) {
     return {
-      title: "Jewellery Creation Not Found | Yashraj Jewellers",
-      description: "The requested luxury jewellery item could not be located.",
+      title: "Luxury Jewellery Piece | Yashraj Jewellers",
+      description: "Explore 100% BIS 916 hallmarked authentic jewellery creations at Yashraj Jewellers.",
     };
   }
 

@@ -45,11 +45,10 @@ export default function LiveGoldRatesWidget() {
                 <button
                   key={city}
                   onClick={() => setSelectedCity(city)}
-                  className={`px-3 py-1 rounded text-xs font-semibold transition ${
-                    selectedCity === city
+                  className={`px-3 py-1 rounded text-xs font-semibold transition ${selectedCity === city
                       ? "bg-[#8F6D2C] text-white shadow-xs"
                       : "text-stone-700 hover:text-[#8F6D2C]"
-                  }`}
+                    }`}
                 >
                   {city}
                 </button>
@@ -199,9 +198,8 @@ export default function LiveGoldRatesWidget() {
                   <button
                     key={k}
                     onClick={() => setCalcKarat(k)}
-                    className={`px-3 py-1.5 font-bold transition ${
-                      calcKarat === k ? "bg-[#8F6D2C] text-white" : "bg-stone-50 text-stone-700"
-                    }`}
+                    className={`px-3 py-1.5 font-bold transition ${calcKarat === k ? "bg-[#8F6D2C] text-white" : "bg-stone-50 text-stone-700"
+                      }`}
                   >
                     {k}K
                   </button>

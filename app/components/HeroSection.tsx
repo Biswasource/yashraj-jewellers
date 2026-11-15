@@ -17,7 +17,6 @@ const HERO_SLIDES = [
     cta: "Sell Gold for Instant Cash",
     secondaryCta: "Check Today's Rate",
     image: "/images/hero/slide-bridal-gold.jpg",
-    category: "necklaces",
   },
   {
     id: 2,
@@ -28,7 +27,6 @@ const HERO_SLIDES = [
     cta: "Explore Wholesale Jewellery",
     secondaryCta: "Wholesale Partner Enquiry",
     image: "/images/hero/slide-temple-polki.jpg",
-    metal: "gold",
   },
   {
     id: 3,
@@ -37,9 +35,8 @@ const HERO_SLIDES = [
     subtitle:
       "From royal Vivaha antique chokers and certified diamond solitaires to authentic Cuttack Tarakasi silver filigree. The best designs with unbeatable wholesale pricing and lifetime exchange.",
     cta: "Shop Best Jewellery",
-    secondaryCta: "Book Showroom Visit",
+    secondaryCta: "Explore High Jewellery",
     image: "/images/hero/slide-solitaire-diamond.jpg",
-    metal: "diamond",
   },
   {
     id: 4,
@@ -50,7 +47,6 @@ const HERO_SLIDES = [
     cta: "Explore Gold Exchange",
     secondaryCta: "Free Purity Valuation",
     image: "/images/hero/slide-silver-filigree.jpg",
-    metal: "silver",
   },
 ];
 
@@ -109,21 +105,16 @@ export default function HeroSection() {
   const slide = HERO_SLIDES[currentSlide];
 
   const handleCta = () => {
-    if (slide.category) {
-      setSelectedCategory(slide.category);
-      router.push(`/products?category=${slide.category}`);
-    } else if (slide.metal) {
-      setSelectedMetal(slide.metal);
-      router.push(`/products?metal=${slide.metal}`);
-    } else {
-      router.push("/products");
-    }
+    setSelectedCategory("all");
+    setSelectedMetal("all");
+    setSelectedOccasion("all");
+    router.push("/products");
   };
 
   return (
     <section className="relative w-full overflow-hidden">
       {/* 1. CINEMATIC HERO SLIDER */}
-      <div className="relative h-[560px] sm:h-[620px] lg:h-[700px] w-full bg-[#0D0A07] overflow-hidden">
+      <div className="relative h-[440px] sm:h-[500px] lg:h-[530px] w-full bg-[#0D0A07] overflow-hidden">
         {HERO_SLIDES.map((item, index) => (
           <div
             key={item.id}
@@ -147,42 +138,42 @@ export default function HeroSection() {
                 {index === currentSlide && (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, y: 24 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                    className="max-w-xl space-y-4 sm:space-y-6"
+                    exit={{ opacity: 0, y: -16 }}
+                    transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+                    className="max-w-xl space-y-3 sm:space-y-4"
                   >
                     {/* Tag */}
-                    <div className="inline-flex items-center space-x-2 bg-black/60 backdrop-blur-md border border-[#C5A059]/50 px-4 py-1.5 rounded-full text-xs font-semibold text-[#F5E8CB] shadow-lg">
-                      <Sparkles className="w-3.5 h-3.5 text-[#DFBA73]" />
+                    <div className="inline-flex items-center space-x-2 bg-black/60 backdrop-blur-md border border-[#C5A059]/40 px-3.5 py-1 rounded-full text-[10px] sm:text-xs font-cinzel tracking-[0.16em] uppercase text-[#F5E8CB] shadow-md">
+                      <Sparkles className="w-3 h-3 text-[#DFBA73]" />
                       <span>{item.tag}</span>
                     </div>
 
                     {/* Title */}
-                    <h2 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-[#FAF8F5] leading-tight drop-shadow-md">
+                    <h2 className="text-2xl sm:text-4xl lg:text-[46px] font-cormorant font-semibold text-[#FFFDF9] leading-[1.12] tracking-[-0.01em] drop-shadow-md">
                       {item.title}
                     </h2>
 
                     {/* Subtitle */}
-                    <p className="text-sm sm:text-base text-stone-200 font-sans leading-relaxed max-w-lg drop-shadow-sm">
+                    <p className="text-xs sm:text-sm text-stone-200/90 font-sans font-light leading-relaxed max-w-lg drop-shadow-xs line-clamp-2 sm:line-clamp-none">
                       {item.subtitle}
                     </p>
 
                     {/* Buttons */}
-                    <div className="pt-2 flex flex-wrap gap-3 sm:gap-4">
+                    <div className="pt-1.5 flex flex-wrap gap-2.5 sm:gap-3.5">
                       <motion.button
-                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileHover={{ scale: 1.04, y: -1 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleCta}
-                        className="px-6 sm:px-8 py-3.5 rounded-full bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-[#1A1208] font-bold text-xs sm:text-sm tracking-wider uppercase hover:shadow-xl hover:shadow-[#C5A059]/40 transition-shadow flex items-center space-x-2 shadow-lg"
+                        className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-full bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-[#1A1208] font-cinzel font-bold text-xs tracking-[0.12em] uppercase hover:shadow-xl hover:shadow-[#C5A059]/40 transition-shadow flex items-center space-x-2 shadow-lg"
                       >
                         <span>{item.cta}</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </motion.button>
 
                       <motion.button
-                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileHover={{ scale: 1.04, y: -1 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           if (item.id === 2) {
@@ -208,16 +199,16 @@ export default function HeroSection() {
                             window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
                           }
                         }}
-                        className="px-6 sm:px-7 py-3.5 rounded-full border border-white/60 text-white font-semibold text-xs sm:text-sm tracking-wider uppercase hover:bg-white/15 transition-all backdrop-blur-md shadow-md"
+                        className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/60 text-white font-cinzel font-semibold text-xs tracking-[0.12em] uppercase hover:bg-white/15 transition-all backdrop-blur-md shadow-md"
                       >
                         {item.secondaryCta}
                       </motion.button>
                     </div>
 
                     {/* Hallmark Trust Badge */}
-                    <div className="pt-4 flex items-center flex-wrap gap-y-1 space-x-3 sm:space-x-4 text-[11px] text-[#DFBA73]">
+                    <div className="pt-2 flex items-center flex-wrap gap-y-1 space-x-2.5 sm:space-x-3.5 text-[10px] sm:text-[11px] text-[#DFBA73]">
                       <div className="flex items-center space-x-1.5">
-                        <Shield className="w-4 h-4 text-[#DFBA73]" />
+                        <Shield className="w-3.5 h-3.5 text-[#DFBA73]" />
                         <span>100% BIS Hallmarked 916</span>
                       </div>
                       <span className="text-stone-400">•</span>
@@ -271,7 +262,7 @@ export default function HeroSection() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12 sm:mb-16">
             <MotionFadeIn delay={0.1}>
-              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-[#093B2A] tracking-tight flex items-center justify-center flex-wrap">
+              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-cormorant font-semibold text-[#093B2A] tracking-tight flex items-center justify-center flex-wrap">
                 <span>Exceeding</span>
                 <span className="font-script text-[#E2A62C] font-normal text-4xl sm:text-6xl lg:text-7xl ml-3">
                   Expectations

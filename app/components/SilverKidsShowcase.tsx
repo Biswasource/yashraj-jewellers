@@ -24,16 +24,11 @@ function LuxuryEmblemIcon() {
 
 export default function SilverKidsShowcase() {
   const router = useRouter();
-  const { setSelectedMetal, setSelectedCategory } = useStore();
+  const { setSelectedMetal } = useStore();
 
   const handleEnquireSilver = () => {
     setSelectedMetal("silver");
     router.push("/products?metal=silver");
-  };
-
-  const handleEnquireKids = () => {
-    setSelectedCategory("kids");
-    router.push("/products?gender=kids");
   };
 
   return (
@@ -112,85 +107,6 @@ export default function SilverKidsShowcase() {
                   <span className="text-sm">→</span>
                 </motion.button>
               </MotionFadeIn>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-
-      {/* =========================================================================
-          BLOCK 2: KIDS JEWELLERY DESIGNED FOR COMFORT (Content Left, Image Right)
-         ========================================================================= */}
-      <div className="py-16 sm:py-20 border-b border-stone-100 bg-white">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
-            {/* Left: Text Content */}
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-6 space-y-6 lg:pr-6 order-2 lg:order-1"
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-              >
-                <LuxuryEmblemIcon />
-              </motion.div>
-
-              <div>
-                <motion.span
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6 }}
-                  className="font-script text-[#E2A62C] font-normal text-5xl sm:text-6xl lg:text-7xl block -mb-2"
-                >
-                  Kids
-                </motion.span>
-                <AnimatedText
-                  text="Jewellery Designed for Comfort"
-                  el="h2"
-                  className="text-3xl sm:text-4xl lg:text-[44px] font-serif text-[#093B2A] font-semibold leading-[1.18] tracking-tight"
-                />
-              </div>
-
-              <MotionFadeIn delay={0.2}>
-                <p className="text-[#5A6E82] text-xs sm:text-sm font-sans leading-relaxed max-w-xl">
-                  Yashraj&apos;s kids&apos; jewellery combines thoughtful design, careful craftsmanship and comfortable styles made with little ones in mind. With smooth detailing and child-friendly designs, each piece reflects Yashraj&apos;s commitment to quality, from first jewellery to birthdays, naming ceremonies and special occasions.
-                </p>
-              </MotionFadeIn>
-
-              <MotionFadeIn delay={0.3} className="pt-2">
-                <motion.button
-                  whileHover={{ scale: 1.03, x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleEnquireKids}
-                  className="inline-flex items-center space-x-3 bg-[#093B2A] hover:bg-[#124831] text-white text-[11px] font-bold tracking-[0.2em] px-8 py-3.5 uppercase transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  <span>EXPLORE KIDS&apos; COLLECTION</span>
-                  <span className="text-sm">→</span>
-                </motion.button>
-              </MotionFadeIn>
-            </motion.div>
-
-            {/* Right: Image Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-6 flex justify-center order-1 lg:order-2"
-            >
-              <div className="relative w-full max-w-[540px] aspect-square rounded-3xl overflow-hidden shadow-xl border border-stone-200/60 bg-[#FFF7ED] group">
-                <img
-                  src="https://lalchnd.com/images/lalchnd/home/kid-wear-01.webp"
-                  alt="Kids Jewellery Designed for Comfort"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-              </div>
             </motion.div>
           </div>
         </div>

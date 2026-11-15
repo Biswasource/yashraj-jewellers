@@ -3,6 +3,8 @@
 :root {
   --font-serif: var(--font-playfair), "Playfair Display", Georgia, serif;
   --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-cormorant: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-cinzel: var(--font-cinzel), "Cinzel", Georgia, serif;
   
   --gold-primary: #C5A059;
   --gold-light: #DFBA73;
@@ -25,6 +27,32 @@ h1, h2, h3, h4, .font-serif, .font-display {
 
 .font-script {
   font-family: var(--font-alex), "Alex Brush", cursive;
+}
+
+.font-cormorant {
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+}
+
+.font-cinzel {
+  font-family: var(--font-cinzel), "Cinzel", Georgia, serif;
+}
+
+/* Global Cursor Pointer for All Buttons & Interactive Controls */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled {
+  cursor: not-allowed;
 }
 
 /* Luxury Gold Text Gradient */
