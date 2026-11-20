@@ -55,6 +55,9 @@ interface StoreContextType {
   getProduct: (id: string) => Product | undefined;
   isSupabaseReady: boolean;
   isLoadingProducts: boolean;
+  isSaving: boolean;
+  savingMessage: string | null;
+  setIsSaving: (saving: boolean, message?: string) => void;
 
   // Admin Authentication
   isAdminAuthenticated: boolean;
@@ -92,6 +95,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
   const [isSupabaseReady, setIsSupabaseReady] = useState<boolean>(false);
+  const [isSaving, setIsSavingState] = useState<boolean>(false);
+  const [savingMessage, setSavingMessage] = useState<string | null>(null);
+
+  const setIsSaving = useCallback((saving: boolean, message?: string) => {
+    setIsSavingState(saving);
+    setSavingMessage(message || (saving ? "Saving Changes..." : null));
+  }, []);
 
   // Admin Authentication State
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
@@ -278,67 +288,87 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Products CRUD with Supabase integration
+  // Products CRUD with Supabase integration & Global Loading Animation
   const addProduct = async (newProduct: Product) => {
-    // 1. Optimistic Local State Update
-    setProducts((prev) => {
-      const updated = [newProduct, ...prev.filter((p) => p.id !== newProduct.id)];
-      try {
-        localStorage.setItem("yj_products", JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    setIsSaving(true, `Saving "${newProduct.name}" to Cloud...`);
+    try {
+      // 1. Optimistic Local State Update
+      setProducts((prev) => {
+        const updated = [newProduct, ...prev.filter((p) => p.id !== newProduct.id)];
+        try {
+          localStorage.setItem("yj_products", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
 
-    // 2. Sync to Supabase if configured
-    if (isSupabaseConfigured()) {
-      const success = await saveProductToSupabase(newProduct);
-      if (success) {
-        showToast(`Masterpiece "${newProduct.name}" saved to Supabase.`);
+      // 2. Sync to Supabase if configured
+      if (isSupabaseConfigured()) {
+        const success = await saveProductToSupabase(newProduct);
+        if (success) {
+          showToast(`Masterpiece "${newProduct.name}" saved to Supabase.`);
+        } else {
+          showToast(`Saved locally. Supabase sync pending (check table permissions).`);
+        }
       } else {
-        showToast(`Saved locally. Supabase sync pending (check table permissions).`);
+        showToast(`Masterpiece "${newProduct.name}" added to inventory.`);
       }
-    } else {
-      showToast(`Masterpiece "${newProduct.name}" added to inventory.`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const updateProduct = async (id: string, updatedData: Partial<Product>) => {
-    // 1. Optimistic Local State Update
-    setProducts((prev) => {
-      const updated = prev.map((p) => (p.id === id ? { ...p, ...updatedData } : p));
-      try {
-        localStorage.setItem("yj_products", JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    setIsSaving(true, "Updating Jewellery Specifications...");
+    try {
+      // 1. Optimistic Local State Update
+      setProducts((prev) => {
+        const updated = prev.map((p) => (p.id === id ? { ...p, ...updatedData } : p));
+        try {
+          localStorage.setItem("yj_products", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
 
-    // 2. Sync to Supabase if configured
-    if (isSupabaseConfigured()) {
-      await updateProductInSupabase(id, updatedData);
+      // 2. Sync to Supabase if configured
+      if (isSupabaseConfigured()) {
+        await updateProductInSupabase(id, updatedData);
+      }
+      showToast(`Product specifications updated.`);
+    } finally {
+      setIsSaving(false);
     }
-    showToast(`Product specifications updated.`);
   };
 
   const deleteProduct = async (id: string) => {
-    // 1. Optimistic Local State Update
-    setProducts((prev) => {
-      const updated = prev.filter((p) => p.id !== id);
-      try {
-        localStorage.setItem("yj_products", JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    setIsSaving(true, "Removing from Inventory...");
+    try {
+      // 1. Optimistic Local State Update
+      setProducts((prev) => {
+        const updated = prev.filter((p) => p.id !== id);
+        try {
+          localStorage.setItem("yj_products", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
 
-    // 2. Sync to Supabase if configured
-    if (isSupabaseConfigured()) {
-      await deleteProductFromSupabase(id);
+      // 2. Sync to Supabase if configured
+      if (isSupabaseConfigured()) {
+        await deleteProductFromSupabase(id);
+      }
+      showToast(`Product removed from inventory.`);
+    } finally {
+      setIsSaving(false);
     }
-    showToast(`Product removed from inventory.`);
   };
 
   const refreshProducts = async () => {
-    await syncProductsFromSupabase();
-    showToast("Products synchronized with Supabase database.");
+    setIsSaving(true, "Synchronizing with Cloud Database...");
+    try {
+      await syncProductsFromSupabase();
+      showToast("Products synchronized with Supabase database.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const pushAllProductsToSupabase = async () => {
@@ -347,13 +377,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const targetProducts = products.length > 0 ? products : PRODUCTS;
-    showToast(`Uploading ${targetProducts.length} creations to Supabase cloud...`);
-    let count = 0;
-    for (const prod of targetProducts) {
-      const ok = await saveProductToSupabase(prod);
-      if (ok) count++;
+    setIsSaving(true, `Pushing ${targetProducts.length} Creations to Supabase Cloud...`);
+    try {
+      showToast(`Uploading ${targetProducts.length} creations to Supabase cloud...`);
+      let count = 0;
+      for (const prod of targetProducts) {
+        const ok = await saveProductToSupabase(prod);
+        if (ok) count++;
+      }
+      showToast(`Synced ${count} of ${targetProducts.length} creations to Supabase! Visible on all hosted devices.`);
+    } finally {
+      setIsSaving(false);
     }
-    showToast(`Synced ${count} of ${targetProducts.length} creations to Supabase! Visible on all hosted devices.`);
   };
 
   const resetProductsToDefault = () => {
@@ -447,6 +482,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         getProduct,
         isSupabaseReady,
         isLoadingProducts,
+        isSaving,
+        savingMessage,
+        setIsSaving,
         isAdminAuthenticated,
         adminLogin,
         adminLogout,

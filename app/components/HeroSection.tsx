@@ -71,22 +71,17 @@ const QUICK_CATEGORIES = [
     category: "rings",
     image: "https://lalchnd.com/images/lalchnd/home/ring-1.webp",
   },
-  {
-    name: "Kid's Wear",
-    category: "bracelets",
-    gender: "kids",
-    image: "https://lalchnd.com/images/lalchnd/home/kids-verity.webp",
-  },
-  {
-    name: "GIFT IDEAS",
-    category: "coins",
-    image: "https://lalchnd.com/images/lalchnd/home/gift.webp",
-  },
 ];
 
 export default function HeroSection() {
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState<number>(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
   const {
     setSelectedCategory,
     setSelectedMetal,
@@ -95,14 +90,61 @@ export default function HeroSection() {
     setIsVideoCallOpen,
   } = useStore();
 
+  // Auto-play timer that pauses on hover or touch drag
   useEffect(() => {
+    if (isPaused || isSwiping) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 6500);
+    }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isPaused, isSwiping]);
 
-  const slide = HERO_SLIDES[currentSlide];
+  const handleNext = () => {
+    setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+  };
+
+  const handlePrev = () => {
+    setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
+    setDragOffset(0);
+    setIsSwiping(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX === null || touchStartY === null || !isSwiping) return;
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const diffX = currentX - touchStartX;
+    const diffY = currentY - touchStartY;
+
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      if (
+        (currentSlide === 0 && diffX > 0) ||
+        (currentSlide === HERO_SLIDES.length - 1 && diffX < 0)
+      ) {
+        setDragOffset(diffX * 0.3);
+      } else {
+        setDragOffset(diffX);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isSwiping) return;
+    if (dragOffset < -50) {
+      handleNext();
+    } else if (dragOffset > 50) {
+      handlePrev();
+    }
+    setDragOffset(0);
+    setIsSwiping(false);
+    setTouchStartX(null);
+    setTouchStartY(null);
+  };
 
   const handleCta = () => {
     setSelectedCategory("all");
@@ -111,103 +153,128 @@ export default function HeroSection() {
     router.push("/products");
   };
 
+  const handleSecondaryCta = (slideId: number) => {
+    if (slideId === 2) {
+      const msg = encodeURIComponent(
+        "Namaste Yashraj Jewellers! I am interested in your wholesale jewellery collections, minimal pricing, and catalogue for my retail business."
+      );
+      window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
+    } else if (slideId === 1) {
+      const msg = encodeURIComponent(
+        "Namaste Yashraj Jewellers! I would like to enquire about today's live gold rate and instant cash valuation for selling my gold."
+      );
+      window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
+    } else if (slideId === 4) {
+      const msg = encodeURIComponent(
+        "Namaste Yashraj Jewellers! I want to enquire about exchanging my old gold for new jewellery and computerized purity valuation."
+      );
+      window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
+    } else {
+      const msg = encodeURIComponent(
+        "Namaste Yashraj Jewellers! I would like to enquire about booking a showroom visit and viewing your luxury jewellery collections."
+      );
+      window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
+    }
+  };
+
   return (
     <section className="relative w-full overflow-hidden">
-      {/* 1. CINEMATIC HERO SLIDER */}
-      <div className="relative h-[440px] sm:h-[500px] lg:h-[530px] w-full bg-[#0D0A07] overflow-hidden">
-        {HERO_SLIDES.map((item, index) => (
-          <div
-            key={item.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
-              }`}
-          >
-            {/* Ultra 8K Background Image with smooth subtle Ken Burns zoom */}
-            <div
-              className={`absolute inset-0 bg-cover bg-center transition-transform duration-[12000ms] ease-out ${index === currentSlide ? "scale-105" : "scale-100"
-                }`}
-              style={{ backgroundImage: `url(${item.image})` }}
-            />
+      {/* 1. CINEMATIC HERO SLIDER - MAJESTIC RESPONSIVE HEIGHT FOR BIG DESKTOP */}
+      <div
+        className="relative h-[520px] sm:h-[580px] md:h-[650px] lg:h-[720px] xl:h-[800px] 2xl:h-[870px] w-full bg-[#0D0A07] overflow-hidden select-none touch-pan-y"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Continuous Horizontal Sliding Track */}
+        <div
+          className="flex h-full w-full"
+          style={{
+            transform: `translateX(calc(-${currentSlide * 100}% + ${dragOffset}px))`,
+            transition: isSwiping ? "none" : "transform 750ms cubic-bezier(0.25, 1, 0.5, 1)",
+          }}
+        >
+          {HERO_SLIDES.map((item, index) => {
+            const isActive = index === currentSlide;
+            return (
+              <div
+                key={item.id}
+                className="relative w-full min-w-full h-full shrink-0 overflow-hidden"
+              >
+                {/* Ultra 8K Background Image with smooth Ken Burns zoom on active slide */}
+                <div
+                  className={`absolute inset-0 bg-cover bg-center transition-transform duration-[12000ms] ease-out ${
+                    isActive ? "scale-108" : "scale-100"
+                  }`}
+                  style={{ backgroundImage: `url(${item.image})` }}
+                />
 
-            {/* Cinematic Gradient Vignette (protects text while showcasing 8K jewellery) */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                {/* Cinematic Vignette Gradients for Text Contrast */}
+                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/20" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/35" />
 
-            {/* Slide Content */}
-            <div className="relative z-20 max-w-7xl mx-auto h-full px-6 lg:px-12 flex flex-col justify-center text-white">
-              <AnimatePresence mode="wait">
-                {index === currentSlide && (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -16 }}
-                    transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-                    className="max-w-xl space-y-3 sm:space-y-4"
-                  >
-                    {/* Tag */}
-                    <div className="inline-flex items-center space-x-2 bg-black/60 backdrop-blur-md border border-[#C5A059]/40 px-3.5 py-1 rounded-full text-[10px] sm:text-xs font-cinzel tracking-[0.16em] uppercase text-[#F5E8CB] shadow-md">
-                      <Sparkles className="w-3 h-3 text-[#DFBA73]" />
+                {/* Slide Content with Responsive Typography for Big Desktop */}
+                <div className="relative z-20 max-w-7xl 2xl:max-w-[1550px] mx-auto h-full px-6 sm:px-10 lg:px-14 xl:px-20 flex flex-col justify-center text-white">
+                  <div className="max-w-xl lg:max-w-2xl xl:max-w-3xl space-y-3.5 sm:space-y-4.5 lg:space-y-6">
+                    {/* Tag Badge */}
+                    <div
+                      className={`inline-flex items-center space-x-2 bg-black/60 backdrop-blur-md border border-[#C5A059]/40 px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs lg:text-sm font-cinzel tracking-[0.16em] uppercase text-[#F5E8CB] shadow-md transition-all duration-700 delay-100 ${
+                        isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#DFBA73]" />
                       <span>{item.tag}</span>
                     </div>
 
                     {/* Title */}
-                    <h2 className="text-2xl sm:text-4xl lg:text-[46px] font-cormorant font-semibold text-[#FFFDF9] leading-[1.12] tracking-[-0.01em] drop-shadow-md">
+                    <h2
+                      className={`text-2xl sm:text-4xl md:text-5xl lg:text-[50px] xl:text-[58px] 2xl:text-[66px] font-cormorant font-semibold text-[#FFFDF9] leading-[1.1] tracking-[-0.01em] drop-shadow-lg transition-all duration-700 delay-200 ${
+                        isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                      }`}
+                    >
                       {item.title}
                     </h2>
 
                     {/* Subtitle */}
-                    <p className="text-xs sm:text-sm text-stone-200/90 font-sans font-light leading-relaxed max-w-lg drop-shadow-xs line-clamp-2 sm:line-clamp-none">
+                    <p
+                      className={`text-xs sm:text-sm md:text-base lg:text-base xl:text-lg text-stone-200/95 font-sans font-light leading-relaxed max-w-lg lg:max-w-xl xl:max-w-2xl drop-shadow-sm line-clamp-3 sm:line-clamp-none transition-all duration-700 delay-300 ${
+                        isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                      }`}
+                    >
                       {item.subtitle}
                     </p>
 
-                    {/* Buttons */}
-                    <div className="pt-1.5 flex flex-wrap gap-2.5 sm:gap-3.5">
-                      <motion.button
-                        whileHover={{ scale: 1.04, y: -1 }}
-                        whileTap={{ scale: 0.98 }}
+                    {/* CTA Buttons */}
+                    <div
+                      className={`pt-1 sm:pt-2 flex flex-wrap gap-2.5 sm:gap-4 transition-all duration-700 delay-400 ${
+                        isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                      }`}
+                    >
+                      <button
                         onClick={handleCta}
-                        className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-full bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-[#1A1208] font-cinzel font-bold text-xs tracking-[0.12em] uppercase hover:shadow-xl hover:shadow-[#C5A059]/40 transition-shadow flex items-center space-x-2 shadow-lg"
+                        className="px-5 sm:px-8 py-2.5 sm:py-3.5 xl:py-4 rounded-full bg-gradient-to-r from-[#DFBA73] via-[#C5A059] to-[#9E7B35] text-[#1A1208] font-cinzel font-bold text-xs sm:text-sm tracking-[0.12em] uppercase hover:shadow-2xl hover:shadow-[#C5A059]/50 hover:brightness-105 transition-all flex items-center space-x-2.5 shadow-lg active:scale-95 cursor-pointer"
                       >
                         <span>{item.cta}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </motion.button>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
 
-                      <motion.button
-                        whileHover={{ scale: 1.04, y: -1 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          if (item.id === 2) {
-                            // Direct WhatsApp Wholesale Enquiry to 70083 43796
-                            const msg = encodeURIComponent(
-                              "Namaste Yashraj Jewellers! I am interested in your wholesale jewellery collections, minimal pricing, and catalogue for my retail business."
-                            );
-                            window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
-                          } else if (item.id === 1) {
-                            const msg = encodeURIComponent(
-                              "Namaste Yashraj Jewellers! I would like to enquire about today's live gold rate and instant cash valuation for selling my gold."
-                            );
-                            window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
-                          } else if (item.id === 4) {
-                            const msg = encodeURIComponent(
-                              "Namaste Yashraj Jewellers! I want to enquire about exchanging my old gold for new jewellery and computerized purity valuation."
-                            );
-                            window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
-                          } else {
-                            const msg = encodeURIComponent(
-                              "Namaste Yashraj Jewellers! I would like to enquire about booking a showroom visit and viewing your luxury jewellery collections."
-                            );
-                            window.open(`https://wa.me/917008343796?text=${msg}`, "_blank");
-                          }
-                        }}
-                        className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/60 text-white font-cinzel font-semibold text-xs tracking-[0.12em] uppercase hover:bg-white/15 transition-all backdrop-blur-md shadow-md"
+                      <button
+                        onClick={() => handleSecondaryCta(item.id)}
+                        className="px-5 sm:px-7 py-2.5 sm:py-3.5 xl:py-4 rounded-full border border-white/70 text-white font-cinzel font-semibold text-xs sm:text-sm tracking-[0.12em] uppercase hover:bg-white/20 transition-all backdrop-blur-md shadow-md active:scale-95 cursor-pointer"
                       >
                         {item.secondaryCta}
-                      </motion.button>
+                      </button>
                     </div>
 
                     {/* Hallmark Trust Badge */}
-                    <div className="pt-2 flex items-center flex-wrap gap-y-1 space-x-2.5 sm:space-x-3.5 text-[10px] sm:text-[11px] text-[#DFBA73]">
-                      <div className="flex items-center space-x-1.5">
+                    <div
+                      className={`pt-1 sm:pt-2 flex items-center flex-wrap gap-y-1.5 space-x-2.5 sm:space-x-4 text-[10px] sm:text-xs xl:text-sm text-[#DFBA73] transition-all duration-700 delay-500 ${
+                        isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-1.5 font-semibold">
                         <Shield className="w-3.5 h-3.5 text-[#DFBA73]" />
                         <span>100% BIS Hallmarked 916</span>
                       </div>
@@ -218,42 +285,46 @@ export default function HeroSection() {
                       <span className="text-stone-400">•</span>
                       <span>Zero Hidden Deductions</span>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         {/* Navigation Arrows */}
         <button
-          onClick={() =>
-            setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)
-          }
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-black/40 hover:bg-[#8F6D2C] text-white border border-white/20 transition-all backdrop-blur-xs"
+          onClick={handlePrev}
+          className="absolute left-3 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-13 sm:h-13 rounded-full bg-black/45 hover:bg-[#8F6D2C] text-white border border-white/25 hover:border-[#DFBA73] transition-all backdrop-blur-md flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 cursor-pointer group"
           aria-label="Previous Slide"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 group-hover:-translate-x-0.5 transition-transform" />
         </button>
         <button
-          onClick={() => setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-black/40 hover:bg-[#8F6D2C] text-white border border-white/20 transition-all backdrop-blur-xs"
+          onClick={handleNext}
+          className="absolute right-3 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-13 sm:h-13 rounded-full bg-black/45 hover:bg-[#8F6D2C] text-white border border-white/25 hover:border-[#DFBA73] transition-all backdrop-blur-md flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 cursor-pointer group"
           aria-label="Next Slide"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-0.5 transition-transform" />
         </button>
 
-        {/* Slide Indicators */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex space-x-2">
+        {/* Bottom Bar: Slide Indicators & Numerical Counter */}
+        <div className="absolute bottom-6 sm:bottom-8 lg:bottom-10 left-1/2 -translate-x-1/2 z-30 flex items-center space-x-3 bg-black/45 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shadow-xl">
           {HERO_SLIDES.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrentSlide(i)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide ? "w-8 bg-[#DFBA73]" : "w-2 bg-white/40"
-                }`}
+              className={`h-2 rounded-full transition-all duration-500 cursor-pointer ${
+                i === currentSlide
+                  ? "w-8 sm:w-10 bg-gradient-to-r from-[#DFBA73] to-[#C5A059] shadow-sm shadow-[#DFBA73]/50"
+                  : "w-2 bg-white/40 hover:bg-white/70"
+              }`}
               aria-label={`Go to slide ${i + 1}`}
             />
           ))}
+          <span className="text-[10px] sm:text-xs font-mono tracking-wider text-[#DFBA73] pl-2 border-l border-white/25 select-none font-semibold">
+            0{currentSlide + 1} / 0{HERO_SLIDES.length}
+          </span>
         </div>
       </div>
 
@@ -274,7 +345,7 @@ export default function HeroSection() {
             </MotionFadeIn>
           </div>
 
-          <MotionStagger className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-8 lg:gap-8 justify-items-center" stagger={0.08}>
+          <MotionStagger className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10 justify-items-center max-w-5xl mx-auto" stagger={0.08}>
             {QUICK_CATEGORIES.map((cat, idx) => (
               <MotionStaggerItem key={idx}>
                 <button

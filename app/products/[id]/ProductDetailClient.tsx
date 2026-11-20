@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Product, getRelatedProducts, LIVE_RATES } from "../../data/products";
 import { useStore } from "../../context/StoreContext";
 import ProductCard from "../../components/ProductCard";
+import ProductPageLoader from "../../components/ProductPageLoader";
 import {
   Heart,
   Share2,
@@ -13,6 +14,7 @@ import {
   CheckCircle2,
   Star,
   ChevronRight,
+  ChevronLeft,
   Send,
   MessageCircle,
   ShieldCheck,
@@ -44,17 +46,41 @@ export default function ProductDetailClient({
     isInWishlist,
     setEnquireProduct,
     showToast,
+    isLoadingProducts,
   } = useStore();
 
   const lookupId = productId || initialProduct?.id;
   const product = (lookupId ? getProduct(lookupId) : undefined) || initialProduct;
 
   const [mounted, setMounted] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isFading, setIsFading] = useState(false);
+
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
+  React.useEffect(() => {
+    // Keep smooth loading screen visible while hydrating and until product is resolved or store finishes loading
+    if (mounted && (product || !isLoadingProducts)) {
+      const fadeTimer = setTimeout(() => {
+        setIsFading(true);
+        const hideTimer = setTimeout(() => {
+          setIsPageLoading(false);
+        }, 320);
+        return () => clearTimeout(hideTimer);
+      }, 650);
+
+      return () => clearTimeout(fadeTimer);
+    }
+  }, [mounted, product, isLoadingProducts]);
+
   const [activeImgIndex, setActiveImgIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState<number>(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [mouseDownX, setMouseDownX] = useState<number | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [openPolicyModal, setOpenPolicyModal] = useState<"why" | "policy" | null>(null);
@@ -75,16 +101,11 @@ export default function ProductDetailClient({
     setAccordionState((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  if (!product && !mounted) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-32 flex flex-col items-center justify-center space-y-3">
-        <div className="w-9 h-9 border-2 border-[#C5A059] border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-stone-400 font-mono">Loading creation details...</p>
-      </div>
-    );
-  }
-
   if (!product) {
+    if (isPageLoading || isLoadingProducts || !mounted) {
+      return <ProductPageLoader isFading={isFading} message="Loading Jewellery Piece..." />;
+    }
+
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center space-y-5">
         <div className="w-20 h-20 mx-auto rounded-full bg-[#FAF3E0] border border-[#DEC9A2] flex items-center justify-center text-[#8F6D2C]">
@@ -111,6 +132,81 @@ export default function ProductDetailClient({
 
   const isWish = isInWishlist(product.id);
   const related = getRelatedProducts(product, 4, products);
+
+  // Safe gallery images array with fallback
+  const galleryImages =
+    product.images && product.images.length > 0
+      ? product.images
+      : ["https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80"];
+
+  // Touch Swipe & Finger Scroll State Handlers
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (galleryImages.length <= 1) return;
+    setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
+    setDragOffset(0);
+    setIsSwiping(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX === null || touchStartY === null || !isSwiping) return;
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const diffX = currentX - touchStartX;
+    const diffY = currentY - touchStartY;
+
+    // Only drag horizontally if horizontal movement exceeds vertical
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      const isAtStart = activeImgIndex === 0 && diffX > 0;
+      const isAtEnd = activeImgIndex === galleryImages.length - 1 && diffX < 0;
+      const resistance = isAtStart || isAtEnd ? 0.3 : 1;
+      setDragOffset(diffX * resistance);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isSwiping) return;
+    const threshold = 40; // 40px swipe trigger
+    if (dragOffset < -threshold && activeImgIndex < galleryImages.length - 1) {
+      setActiveImgIndex((prev) => prev + 1);
+    } else if (dragOffset > threshold && activeImgIndex > 0) {
+      setActiveImgIndex((prev) => prev - 1);
+    }
+    setDragOffset(0);
+    setTouchStartX(null);
+    setTouchStartY(null);
+    setIsSwiping(false);
+  };
+
+  // Mouse drag support for desktop testing
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (galleryImages.length <= 1) return;
+    setMouseDownX(e.clientX);
+    setDragOffset(0);
+    setIsSwiping(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (mouseDownX === null || !isSwiping) return;
+    const diffX = e.clientX - mouseDownX;
+    const isAtStart = activeImgIndex === 0 && diffX > 0;
+    const isAtEnd = activeImgIndex === galleryImages.length - 1 && diffX < 0;
+    const resistance = isAtStart || isAtEnd ? 0.3 : 1;
+    setDragOffset(diffX * resistance);
+  };
+
+  const handleMouseUp = () => {
+    if (!isSwiping) return;
+    const threshold = 40;
+    if (dragOffset < -threshold && activeImgIndex < galleryImages.length - 1) {
+      setActiveImgIndex((prev) => prev + 1);
+    } else if (dragOffset > threshold && activeImgIndex > 0) {
+      setActiveImgIndex((prev) => prev - 1);
+    }
+    setDragOffset(0);
+    setMouseDownX(null);
+    setIsSwiping(false);
+  };
 
   // Formatted price with 2 decimals
   const formattedPrice = product.price.toLocaleString("en-IN", {
@@ -149,24 +245,98 @@ export default function ProductDetailClient({
   };
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen relative">
+      {isPageLoading && <ProductPageLoader isFading={isFading} message="Loading Jewellery Piece..." />}
       {/* 1. TOP MAIN PRODUCT SECTION (COMPACT LALCHND LAYOUT) */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-6 lg:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
-          {/* LEFT: GALLERY (COMPACT 5 COLUMNS) */}
+          {/* LEFT: GALLERY WITH TOUCH FINGER SWIPE & SLIDE ANIMATION (COMPACT 5 COLUMNS) */}
           <div className="lg:col-span-5 space-y-3">
             <div className="sticky top-24 space-y-3">
-              {/* Main Stage Image (Pure image, no border, no background color) */}
-              <div className="relative aspect-square w-full max-w-[340px] sm:max-w-[360px] mx-auto overflow-hidden flex items-center justify-center group">
-                <img
-                  src={product.images[activeImgIndex] || product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-                />
+              {/* Main Stage Image Slider Container with Finger Touch/Swipe */}
+              <div
+                className="relative aspect-square w-full max-w-[340px] sm:max-w-[360px] mx-auto overflow-hidden flex items-center justify-center group select-none touch-pan-y"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                {/* Smooth Animated Sliding Track */}
+                <div
+                  className="flex w-full h-full cursor-grab active:cursor-grabbing"
+                  style={{
+                    transform: `translateX(calc(-${activeImgIndex * 100}% + ${dragOffset}px))`,
+                    transition: isSwiping ? "none" : "transform 350ms cubic-bezier(0.25, 1, 0.5, 1)",
+                  }}
+                >
+                  {galleryImages.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className="w-full h-full shrink-0 flex items-center justify-center p-1"
+                    >
+                      <img
+                        src={img}
+                        alt={`${product.name} - View ${idx + 1}`}
+                        draggable={false}
+                        className="w-full h-full object-contain pointer-events-none transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Left Floating Arrow Button */}
+                {galleryImages.length > 1 && activeImgIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveImgIndex((prev) => Math.max(prev - 1, 0));
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-700 hover:text-stone-950 shadow-md border border-[#E8DFC8] flex items-center justify-center opacity-85 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 cursor-pointer"
+                    aria-label="Previous Photo"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Right Floating Arrow Button */}
+                {galleryImages.length > 1 && activeImgIndex < galleryImages.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveImgIndex((prev) => Math.min(prev + 1, galleryImages.length - 1));
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-700 hover:text-stone-950 shadow-md border border-[#E8DFC8] flex items-center justify-center opacity-85 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 cursor-pointer"
+                    aria-label="Next Photo"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Swipe Slide Feedback Dots Indicator */}
+                {galleryImages.length > 1 && (
+                  <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10 flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-xs pointer-events-none">
+                    {galleryImages.map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          i === activeImgIndex ? "w-5 bg-[#DFBA73]" : "w-1.5 bg-white/60"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {/* Wishlist Heart */}
                 <button
-                  onClick={() => addToWishlist(product)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToWishlist(product);
+                  }}
                   className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all duration-200 cursor-pointer ${
                     isWish
                       ? "bg-white text-rose-600 shadow-sm scale-105"
@@ -178,16 +348,16 @@ export default function ProductDetailClient({
                 </button>
               </div>
 
-              {/* Thumbnails Strip (No border, no background color) */}
-              {product.images.length > 1 && (
+              {/* Thumbnails Strip (Synced with active slide) */}
+              {galleryImages.length > 1 && (
                 <div className="flex items-center justify-center space-x-2.5 overflow-x-auto pb-1 scrollbar-thin">
-                  {product.images.map((img, idx) => (
+                  {galleryImages.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => setActiveImgIndex(idx)}
-                      className={`relative w-14 h-14 overflow-hidden shrink-0 transition-all cursor-pointer ${
+                      className={`relative w-14 h-14 overflow-hidden shrink-0 rounded-lg transition-all cursor-pointer ${
                         activeImgIndex === idx
-                          ? "ring-2 ring-[#C5A059] opacity-100"
+                          ? "ring-2 ring-[#C5A059] opacity-100 scale-105 shadow-xs"
                           : "opacity-60 hover:opacity-100"
                       }`}
                     >

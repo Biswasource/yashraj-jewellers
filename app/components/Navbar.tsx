@@ -128,21 +128,25 @@ export default function Navbar() {
       <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-stone-200">
       {/* 2. MAIN BRAND HEADER */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-3 lg:gap-5">
-        {/* Left Side: LOGO (Left Aligned with Round Emblem) */}
-        <Link href="/" className="flex items-center space-x-2.5 sm:space-x-3.5 group text-left">
-          <div className="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full overflow-hidden shadow-md border-2 border-[#C5A059]/60 group-hover:scale-105 transition-all duration-300 shrink-0 bg-[#072016]">
+        {/* Left Side: LOGO & RESPONSIVE BRAND TITLE */}
+        <Link href="/" className="flex items-center space-x-2 sm:space-x-2.5 md:space-x-3.5 group text-left min-w-0 shrink">
+          {/* Round Luxury Emblem */}
+          <div className="relative w-9 h-9 min-[400px]:w-10 min-[400px]:h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 lg:w-13 lg:h-13 rounded-full overflow-hidden shadow-md border-2 border-[#C5A059]/60 group-hover:border-[#DFBA73] group-hover:scale-105 transition-all duration-300 shrink-0 bg-[#072016]">
             <img
               src="/logo.png"
               alt="Yashraj Jewellers"
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-xl sm:text-2xl font-serif tracking-[0.2em] uppercase font-bold text-[#1A130B] group-hover:text-[#9E7B35] transition-colors leading-tight">
+
+          {/* Responsive Brand Typography */}
+          <div className="flex flex-col min-w-0 justify-center">
+            <h1 className="text-base min-[380px]:text-lg sm:text-xl md:text-2xl lg:text-[26px] font-serif font-bold text-[#1A130B] group-hover:text-[#9E7B35] transition-colors leading-none tracking-[0.12em] min-[380px]:tracking-[0.16em] sm:tracking-[0.18em] lg:tracking-[0.22em] uppercase truncate">
               Yashraj
             </h1>
-            <p className="text-[10px] sm:text-[11px] font-sans tracking-[0.28em] text-[#8F6D2C] uppercase font-semibold">
-              Jewellers • Est. 1982
+            <p className="text-[8px] min-[360px]:text-[8.5px] sm:text-[10px] md:text-[11px] lg:text-[11.5px] font-sans font-semibold text-[#8F6D2C] uppercase tracking-[0.12em] min-[360px]:tracking-[0.16em] sm:tracking-[0.22em] lg:tracking-[0.28em] whitespace-nowrap leading-none mt-1 sm:mt-1.5">
+              <span>Jewellers</span>
+              <span className="hidden min-[360px]:inline"> • Est. 1982</span>
             </p>
           </div>
         </Link>
@@ -482,7 +486,7 @@ export default function Navbar() {
         </nav>
 
         {/* Center/Right Side: ACTIONS (Search, Wholesale Enquiry, Wishlist, Enquiry Bag, and Mobile Menu Toggle) */}
-        <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4 shrink-0">
           {/* Global Search Bar (Desktop & Tablet with live interactive suggestions) */}
           <div ref={searchContainerRef} className="hidden md:block relative">
             <form

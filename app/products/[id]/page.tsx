@@ -33,6 +33,7 @@ export async function generateMetadata({
   }
 
   const primaryImage = product.images[0] || "/logo.png";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://yashrajjewellers.com";
 
   return {
     title: `${product.name} (${product.purity}) | Yashraj Jewellers`,
@@ -47,9 +48,13 @@ export async function generateMetadata({
       "BIS 916 Hallmark",
       "Instant Cash for Gold",
     ],
+    alternates: {
+      canonical: `/products/${id}`,
+    },
     openGraph: {
       title: `${product.name} | Yashraj Jewellers Odisha`,
       description: product.description,
+      url: `/products/${id}`,
       images: [
         {
           url: primaryImage,
@@ -59,15 +64,64 @@ export async function generateMetadata({
         },
       ],
     },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.name} | Yashraj Jewellers`,
+      description: product.description,
+      images: [primaryImage],
+    },
   };
 }
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { id } = await params;
   const product = getProductById(id);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://yashrajjewellers.com";
+
+  const productJsonLd = product
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: product.name,
+        image: product.images && product.images.length > 0 ? product.images : [`${siteUrl}/logo.png`],
+        description: product.description,
+        sku: product.code,
+        mpn: product.id,
+        brand: {
+          "@type": "Brand",
+          name: "Yashraj Jewellers",
+        },
+        offers: {
+          "@type": "Offer",
+          url: `${siteUrl}/products/${product.id}`,
+          priceCurrency: "INR",
+          price: product.price,
+          priceValidUntil: "2027-12-31",
+          itemCondition: "https://schema.org/NewCondition",
+          availability: product.inStock
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+          seller: {
+            "@type": "Organization",
+            name: "Yashraj Jewellers",
+          },
+        },
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: product.rating || 5.0,
+          reviewCount: product.reviewsCount || 18,
+        },
+      }
+    : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF9F5] selection:bg-[#DFBA73]/30 text-[#1A130B]">
+      {productJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        />
+      )}
       <Navbar />
       <main className="flex-1">
         <ProductDetailClient product={product} productId={id} />

@@ -9,10 +9,14 @@ import PromisesSection from "./components/PromisesSection";
 import CustomerTestimonials from "./components/CustomerTestimonials";
 import FollowUsSection from "./components/FollowUsSection";
 import Footer from "./components/Footer";
+import InstantCashGoldModal from "./components/InstantCashGoldModal";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col bg-white selection:bg-[#DFBA73]/30">
+      {/* Attractive 5-Minute Instant Cash For Gold Offer Popup */}
+      <InstantCashGoldModal />
+
       {/* 1. Regal Header & Navigation */}
       <Navbar />
 

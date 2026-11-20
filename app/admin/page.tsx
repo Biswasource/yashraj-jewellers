@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useStore } from "../context/StoreContext";
+import ProductPageLoader from "../components/ProductPageLoader";
 import {
   Product,
   CATEGORIES,
@@ -581,7 +582,10 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] text-[#1A130B] flex flex-col selection:bg-[#DFBA73]/30 font-sans">
+    <div className="min-h-screen bg-[#FAF9F5] text-[#1A130B] flex flex-col selection:bg-[#DFBA73]/30 font-sans relative">
+      {(isUploadingImage || isUploadingDescImage) && (
+        <ProductPageLoader message={uploadProgressText || "Uploading Photo to Cloud..."} />
+      )}
       {/* 1. TOP ADMIN PORTAL NAVBAR */}
       <header className="sticky top-0 z-40 bg-[#072016] text-[#F5E8CB] border-b-2 border-[#DFBA73]/40 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">

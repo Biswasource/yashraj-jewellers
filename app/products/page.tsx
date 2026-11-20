@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import ProductCard from "../components/ProductCard";
+import ProductPageLoader from "../components/ProductPageLoader";
 import { useStore } from "../context/StoreContext";
 import {
   CATEGORIES,
@@ -333,15 +334,7 @@ function ProductsContent() {
 
           {/* Grid display: 4x4 layout */}
           {isLoadingProducts && products.length === 0 ? (
-            <div className="grid gap-6 sm:gap-8 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="animate-pulse space-y-3">
-                  <div className="w-full aspect-square bg-[#EAE2D2]/60 rounded-2xl" />
-                  <div className="h-4 bg-[#EAE2D2]/70 rounded w-3/4" />
-                  <div className="h-3.5 bg-[#EAE2D2]/50 rounded w-1/2" />
-                </div>
-              ))}
-            </div>
+            <ProductPageLoader message="Loading Jewellery Catalogue..." />
           ) : filteredProducts.length > 0 ? (
             <div className="grid gap-6 sm:gap-8 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {filteredProducts.map((product) => (
