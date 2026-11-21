@@ -91,7 +91,7 @@ export default function LuxuryEditorialShowcase() {
 
               <MotionFadeIn delay={0.2}>
                 <p className="text-[#5A6E82] text-xs sm:text-sm font-sans leading-relaxed max-w-xl">
-                  Yashraj offers gold jewellery in a range of traditional and contemporary styles, including pieces designed for different occasions and personal preferences. The collection combines skilled workmanship with thoughtful detailing, offering gold jewellery that reflects timeless appeal and lasting value.
+                  Yashraj offers exquisite jewellery across handcrafted solid gold chains, certified diamond rings, royal jhumka earrings, and fine tennis bracelets. Each piece combines master workmanship with lasting value and 100% BIS 916 purity.
                 </p>
               </MotionFadeIn>
 

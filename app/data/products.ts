@@ -2,16 +2,7 @@ export interface Product {
   id: string;
   name: string;
   code: string;
-  category:
-    | "earrings"
-    | "rings"
-    | "necklaces"
-    | "bangles"
-    | "mangalsutra"
-    | "pendants"
-    | "bracelets"
-    | "chains"
-    | "coins";
+  category: "bracelets" | "rings" | "earrings" | "chains";
   metal: "gold" | "diamond" | "silver";
   purity: "24KT (999 Pure)" | "22KT (916 BIS)" | "18KT Gold & Diamond" | "925 Sterling Silver";
   gender: "women" | "men" | "kids" | "unisex";
@@ -36,22 +27,16 @@ export interface Product {
 
 export const CATEGORIES = [
   { id: "all", label: "All Jewellery" },
-  { id: "necklaces", label: "Necklaces & Harams" },
-  { id: "earrings", label: "Earrings & Jhumkas" },
-  { id: "rings", label: "Rings & Solitaires" },
-  { id: "bangles", label: "Bangles & Kadas" },
-  { id: "mangalsutra", label: "Mangalsutra" },
-  { id: "pendants", label: "Pendants & Sets" },
   { id: "bracelets", label: "Bracelets" },
+  { id: "rings", label: "Rings" },
+  { id: "earrings", label: "Earrings" },
   { id: "chains", label: "Gold Chains" },
-  { id: "coins", label: "Lakshmi 24K Coins" },
 ];
 
 export const METALS = [
   { id: "all", label: "All Metals" },
   { id: "gold", label: "Gold (22KT / 24KT)" },
   { id: "diamond", label: "Certified Diamond" },
-  { id: "silver", label: "Silver & Filigree (925)" },
 ];
 
 export const OCCASIONS = [
@@ -102,32 +87,31 @@ export const PRODUCTS: Product[] = [
     certification: "100% BIS 916 Hallmarked with Laser HUID",
   },
   {
-    id: "yj-rajwada-choker",
-    name: "Rajwada Royal 22K Gold Antique Choker Set",
-    code: "YJ-BRD-8821",
-    category: "necklaces",
+    id: "yj-mayura-temple-jhumkas",
+    name: "Mayura Temple Craft 22K Gold Jhumkas",
+    code: "YJ-JHM-4402",
+    category: "earrings",
     metal: "gold",
     purity: "22KT (916 BIS)",
     gender: "women",
-    occasion: "wedding",
-    price: 384500,
-    originalPrice: 412000,
-    grossWeight: 48.6,
-    netGoldWeight: 46.2,
-    stoneWeight: "2.40 cts natural ruby & emerald beads",
-    makingCharges: 32500,
-    gst: 11200,
-    tag: "Heritage Bridal",
-    rating: 4.9,
-    reviewsCount: 42,
+    occasion: "festive",
+    price: 94500,
+    originalPrice: 102000,
+    grossWeight: 12.4,
+    netGoldWeight: 12.4,
+    makingCharges: 8600,
+    gst: 2750,
+    tag: "Trending",
+    rating: 4.8,
+    reviewsCount: 51,
     inStock: true,
     description:
-      "Handcrafted by master artisans with intricate filigree work, kundan detailing, and dangling pearl clusters. BIS 916 hallmarked for an unforgettable bridal grandeur.",
+      "Graceful peacock motif crafted in traditional matte antique 22K gold, accented with delicate golden ghungroos and floral stud tops.",
     images: [
-      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
-      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=80",
     ],
-    certification: "BIS Hallmarked (HUID #YJ9167812) & 100% Certified",
+    certification: "BIS Hallmarked with Laser HUID",
   },
   {
     id: "yj-eternity-solitaire",
@@ -158,112 +142,32 @@ export const PRODUCTS: Product[] = [
     certification: "IGI & SGL Certified Diamond (Color E-F, Clarity VVS1)",
   },
   {
-    id: "yj-mayura-temple-jhumkas",
-    name: "Mayura Temple Craft 22K Gold Jhumkas",
-    code: "YJ-JHM-4402",
-    category: "earrings",
-    metal: "gold",
-    purity: "22KT (916 BIS)",
-    gender: "women",
-    occasion: "festive",
-    price: 94500,
-    originalPrice: 102000,
-    grossWeight: 12.4,
-    netGoldWeight: 12.4,
-    makingCharges: 8600,
-    gst: 2750,
-    tag: "Trending",
-    rating: 4.8,
-    reviewsCount: 51,
-    inStock: true,
-    description:
-      "Graceful peacock motif crafted in traditional matte antique 22K gold, accented with delicate golden ghungroos and floral stud tops.",
-    images: [
-      "https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80",
-      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=80",
-    ],
-    certification: "BIS Hallmarked with Laser HUID",
-  },
-  {
-    id: "yj-tarakasi-peacock-necklace",
-    name: "Odisha Tarakasi Pure 925 Silver Filigree Peacock Necklace",
-    code: "YJ-SLV-7719",
-    category: "necklaces",
-    metal: "silver",
-    purity: "925 Sterling Silver",
-    gender: "women",
-    occasion: "festive",
-    price: 24800,
-    originalPrice: 28500,
-    grossWeight: 54.0,
-    netGoldWeight: 0,
-    makingCharges: 4200,
-    gst: 720,
-    tag: "Bestseller",
-    rating: 4.9,
-    reviewsCount: 39,
-    inStock: true,
-    description:
-      "Authentic GI-tagged Cuttack Tarakasi filigree masterpiece woven by master Odia karigars using 99% pure drawn silver wire. Lightweight yet stunningly regal.",
-    images: [
-      "https://images.unsplash.com/photo-1611591475879-11536b135154?auto=format&fit=crop&w=900&q=80",
-      "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=80",
-    ],
-    certification: "Certified 925 Sterling Silver Hallmark",
-  },
-  {
-    id: "yj-sankha-pola-kadas",
-    name: "Classic Sankha Pola Style 22K Gold Kada Bangle (Pair)",
-    code: "YJ-BNG-3190",
-    category: "bangles",
-    metal: "gold",
-    purity: "22KT (916 BIS)",
+    id: "yj-aurora-diamond-ring",
+    name: "Princess Cut 18K Diamond Solitaire Ring",
+    code: "YJ-RNG-7740",
+    category: "rings",
+    metal: "diamond",
+    purity: "18KT Gold & Diamond",
     gender: "women",
     occasion: "daily-wear",
-    price: 148000,
-    originalPrice: 162000,
-    grossWeight: 19.8,
-    netGoldWeight: 19.8,
-    makingCharges: 11500,
-    gst: 4310,
+    price: 135000,
+    originalPrice: 152000,
+    grossWeight: 3.9,
+    netGoldWeight: 3.7,
+    stoneWeight: "0.85 ct Princess Cut Diamond (VVS2)",
+    makingCharges: 9800,
+    gst: 3940,
     tag: "Trending",
     rating: 4.9,
-    reviewsCount: 84,
+    reviewsCount: 34,
     inStock: true,
     description:
-      "Timeless gold kadas engineered with ergonomic inner curves for comfortable daily wear. Finished in lustrous dual-tone polish with screw hinge lock.",
+      "Captivating princess cut solitaire diamond set on an ergonomic 18K solid yellow gold shank. Perfect for engagements and daily fine luxury.",
     images: [
-      "https://images.unsplash.com/photo-1611591475879-11536b135154?auto=format&fit=crop&w=900&q=80",
-      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80",
     ],
-    certification: "BIS 916 Hallmark Laser Engraved",
-  },
-  {
-    id: "yj-lakshmi-ganesh-bullion",
-    name: "24K Pure Gold Lakshmi-Ganesh 10 Gram Bullion Coin",
-    code: "YJ-BLN-9991",
-    category: "coins",
-    metal: "gold",
-    purity: "24KT (999 Pure)",
-    gender: "unisex",
-    occasion: "festive",
-    price: 81200,
-    originalPrice: 83500,
-    grossWeight: 10.0,
-    netGoldWeight: 10.0,
-    makingCharges: 950,
-    gst: 2436,
-    tag: "24K Pure Bullion",
-    rating: 5.0,
-    reviewsCount: 156,
-    inStock: true,
-    description:
-      "Investment-grade 999.9 pure gold coin embossed with Lord Ganesha and Goddess Lakshmi. Tamper-evident certicard packing with QR authentication.",
-    images: [
-      "https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=900&q=80",
-      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80",
-    ],
-    certification: "NABL Assayed 999.9 Purity Certificate with Laser Serial",
+    certification: "100% IGI Certified Natural Diamond",
   },
   {
     id: "yj-royal-tennis-bracelet",
@@ -294,6 +198,33 @@ export const PRODUCTS: Product[] = [
     certification: "IGI Worldwide Diamond Grading Report",
   },
   {
+    id: "yj-sankha-pola-kadas",
+    name: "Classic Sankha Pola Style 22K Gold Kada Bracelet (Pair)",
+    code: "YJ-BNG-3190",
+    category: "bracelets",
+    metal: "gold",
+    purity: "22KT (916 BIS)",
+    gender: "women",
+    occasion: "daily-wear",
+    price: 148000,
+    originalPrice: 162000,
+    grossWeight: 19.8,
+    netGoldWeight: 19.8,
+    makingCharges: 11500,
+    gst: 4310,
+    tag: "Trending",
+    rating: 4.9,
+    reviewsCount: 84,
+    inStock: true,
+    description:
+      "Timeless gold kada bracelets engineered with ergonomic inner curves for comfortable daily wear. Finished in lustrous dual-tone polish with screw hinge lock.",
+    images: [
+      "https://images.unsplash.com/photo-1611591475879-11536b135154?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
+    ],
+    certification: "BIS 916 Hallmark Laser Engraved",
+  },
+  {
     id: "yj-mens-curb-chain",
     name: "Men's Imperial Solid Curb Chain 22K Gold 30g",
     code: "YJ-CHN-5509",
@@ -321,64 +252,37 @@ export const PRODUCTS: Product[] = [
     certification: "BIS 916 Hallmark Laser Engraved",
   },
   {
-    id: "yj-panchmukhi-hanuman-silver",
-    name: "Panchmukhi Hanuman Ji Pure 999 Silver Idol for Car / Pooja",
-    code: "YJ-IDL-1104",
-    category: "coins",
-    metal: "silver",
-    purity: "925 Sterling Silver",
-    gender: "unisex",
-    occasion: "festive",
-    price: 18500,
-    originalPrice: 21000,
-    grossWeight: 145.0,
-    netGoldWeight: 0,
-    makingCharges: 3500,
-    gst: 540,
-    tag: "Bestseller",
-    rating: 5.0,
-    reviewsCount: 112,
-    inStock: true,
-    description:
-      "Handcrafted solid silver deity idol with micro-chiseled facial detailing, weapons, and protective blessings. As praised in verified customer reviews.",
-    images: [
-      "https://images.unsplash.com/photo-1611591475879-11536b135154?auto=format&fit=crop&w=900&q=80",
-      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
-    ],
-    certification: "Silver Hallmark with Certificate of Purity",
-  },
-  {
-    id: "yj-traditional-mangalsutra",
-    name: "Traditional 22K Gold Mangalsutra with Black Beads",
-    code: "YJ-MNG-6201",
-    category: "mangalsutra",
+    id: "yj-classic-rope-gold-chain",
+    name: "22K Solid Italian Rope Gold Chain 16g",
+    code: "YJ-CHN-3321",
+    category: "chains",
     metal: "gold",
     purity: "22KT (916 BIS)",
-    gender: "women",
-    occasion: "wedding",
-    price: 78500,
-    originalPrice: 86000,
-    grossWeight: 9.8,
-    netGoldWeight: 8.5,
-    makingCharges: 6200,
-    gst: 2280,
+    gender: "unisex",
+    occasion: "daily-wear",
+    price: 122000,
+    originalPrice: 132000,
+    grossWeight: 16.0,
+    netGoldWeight: 16.0,
+    makingCharges: 7800,
+    gst: 3560,
     tag: "Bestseller",
     rating: 4.9,
-    reviewsCount: 53,
+    reviewsCount: 63,
     inStock: true,
     description:
-      "Sacred auspicious black beads double chain featuring an intricate 22K yellow gold pendant with floral motifs and ghungroo drops.",
+      "Timeless hand-woven Italian rope chain crafted in pure 22KT yellow gold. Smooth, flexible, and radiant for daily wear or pairing with pendants.",
     images: [
-      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
-      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1611591475879-11536b135154?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=80",
     ],
     certification: "BIS 916 Hallmark Laser Engraved",
   },
   {
     id: "yj-pure-gold-lotus-pendant",
-    name: "Pure 22K Gold Floral Pendant & Chain Set",
+    name: "Pure 22K Gold Floral Pendant & Rope Chain",
     code: "YJ-PND-2041",
-    category: "pendants",
+    category: "chains",
     metal: "gold",
     purity: "22KT (916 BIS)",
     gender: "women",
@@ -424,27 +328,21 @@ export function matchesProductSearch(product: Product, query: string): boolean {
     const inOccasion = product.occasion?.toLowerCase().includes(token);
     const inGender = product.gender?.toLowerCase().includes(token);
 
-    // Common jewellery synonyms & plurals
-    const isJhumka =
-      (token.includes("jhumk") || token.includes("earring") || token.includes("bali") || token.includes("stud")) &&
-      (product.category === "earrings" || inName);
-    const isNecklace =
-      (token.includes("neck") || token.includes("haar") || token.includes("choker") || token.includes("haram") || token.includes("mangalsutra")) &&
-      (product.category === "necklaces" || product.category === "mangalsutra" || inName);
+    // Common jewellery synonyms & plurals for Bracelets, Rings, Earrings & Chains
+    const isBracelet =
+      (token.includes("bracelet") || token.includes("kada") || token.includes("wrist") || token.includes("bangle")) &&
+      (product.category === "bracelets" || inName);
     const isRing =
-      (token.includes("ring") || token.includes("solitaire") || token.includes("anguthi")) &&
+      (token.includes("ring") || token.includes("solitaire") || token.includes("band") || token.includes("anguthi")) &&
       (product.category === "rings" || inName);
-    const isBangle =
-      (token.includes("bangle") || token.includes("kada") || token.includes("chudi") || token.includes("kangan") || token.includes("bracelet")) &&
-      (product.category === "bangles" || product.category === "bracelets" || inName);
-    const isCoin =
-      (token.includes("coin") || token.includes("ginni") || token.includes("bar") || token.includes("bullion") || token.includes("lakshmi")) &&
-      (product.category === "coins" || inName);
-    const isSilver =
-      (token === "silver" || token.includes("tarakasi") || token.includes("filigree") || token.includes("925")) &&
-      (product.metal === "silver" || inName || inDesc);
+    const isEarring =
+      (token.includes("earring") || token.includes("jhumk") || token.includes("bali") || token.includes("stud")) &&
+      (product.category === "earrings" || inName);
+    const isChain =
+      (token.includes("chain") || token.includes("sikri") || token.includes("curb") || token.includes("rope")) &&
+      (product.category === "chains" || inName);
     const isGold =
-      (token === "gold" || token === "22k" || token === "24k" || token === "916" || token === "999" || token === "kundan") &&
+      (token === "gold" || token === "22k" || token === "24k" || token === "916") &&
       (product.metal === "gold" || inPurity || inName || inDesc);
     const isDiamond =
       (token === "diamond" || token === "solitaire" || token === "18k" || token === "750") &&
@@ -460,12 +358,10 @@ export function matchesProductSearch(product: Product, query: string): boolean {
       inPurity ||
       inOccasion ||
       inGender ||
-      isJhumka ||
-      isNecklace ||
+      isBracelet ||
       isRing ||
-      isBangle ||
-      isCoin ||
-      isSilver ||
+      isEarring ||
+      isChain ||
       isGold ||
       isDiamond
     );

@@ -23,19 +23,19 @@ const HERO_SLIDES = [
     tag: "Direct Gold Wholesaler • Minimal Price & Making Charges",
     title: "Direct Gold Wholesaler at Lowest Wholesale Prices",
     subtitle:
-      "Buy certified 22K & 24K gold jewellery directly from the wholesaler. Get minimal making charges, zero middleman margins, and pure 100% BIS 916 hallmarked bridal and daily collections.",
+      "Buy certified 22K & 24K gold jewellery directly from the wholesaler. Minimal making charges, zero middleman margins, and pure BIS 916 hallmarked chains, rings, earrings, and bracelets.",
     cta: "Explore Wholesale Jewellery",
     secondaryCta: "Wholesale Partner Enquiry",
     image: "/images/hero/slide-temple-polki.jpg",
   },
   {
     id: 3,
-    tag: "Odisha's Most Trusted Jeweller Since 1982",
-    title: "Best Luxury Jewellery for Life's Grand Moments",
+    tag: "Certified Diamonds & 22K Gold • Since 1982",
+    title: "Bracelets, Rings, Earrings & Solid Gold Chains",
     subtitle:
-      "From royal Vivaha antique chokers and certified diamond solitaires to authentic Cuttack Tarakasi silver filigree. The best designs with unbeatable wholesale pricing and lifetime exchange.",
-    cta: "Shop Best Jewellery",
-    secondaryCta: "Explore High Jewellery",
+      "From sparkling diamond solitaires and tennis bracelets to royal jhumka earrings and solid gold chains. Unbeatable wholesale pricing and guaranteed lifetime exchange.",
+    cta: "Explore Fine Jewellery",
+    secondaryCta: "View Trending Designs",
     image: "/images/hero/slide-solitaire-diamond.jpg",
   },
   {
@@ -52,16 +52,6 @@ const HERO_SLIDES = [
 
 const QUICK_CATEGORIES = [
   {
-    name: "EARRINGS",
-    category: "earrings",
-    image: "https://lalchnd.com/images/lalchnd/home/earrings.webp",
-  },
-  {
-    name: "BANGLES",
-    category: "bangles",
-    image: "https://lalchnd.com/images/lalchnd/home/bangels.webp",
-  },
-  {
     name: "BRACELETS",
     category: "bracelets",
     image: "https://lalchnd.com/images/lalchnd/home/BRACELETS.webp",
@@ -70,6 +60,16 @@ const QUICK_CATEGORIES = [
     name: "RINGS",
     category: "rings",
     image: "https://lalchnd.com/images/lalchnd/home/ring-1.webp",
+  },
+  {
+    name: "EARRINGS",
+    category: "earrings",
+    image: "https://lalchnd.com/images/lalchnd/home/earrings.webp",
+  },
+  {
+    name: "GOLD CHAIN",
+    category: "chains",
+    image: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=600&q=80",
   },
 ];
 

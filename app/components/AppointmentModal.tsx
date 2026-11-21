@@ -104,20 +104,20 @@ export default function AppointmentModal() {
                 onChange={(e) => setInterestCategory(e.target.value)}
                 className="w-full p-2.5 bg-white border border-stone-200 rounded-xl text-stone-900"
               >
-                <option value="Vivaha Bridal Sets (Heavy Gold & Kundan)">
-                  Vivaha Bridal Sets (Heavy Gold & Kundan)
+                <option value="22K Gold & Diamond Bracelets">
+                  22K Gold &amp; Diamond Bracelets
                 </option>
-                <option value="Diamond Solitaire Rings & Cocktails">
-                  Diamond Solitaire Rings & Cocktails (IGI Certified)
+                <option value="Diamond Solitaire & Gold Rings">
+                  Diamond Solitaire &amp; Gold Rings
                 </option>
-                <option value="Cuttack Tarakasi Silver Filigree Masterpieces">
-                  Cuttack Tarakasi Silver Filigree Masterpieces
+                <option value="Royal 22K Gold & Diamond Earrings">
+                  Royal 22K Gold &amp; Diamond Earrings
                 </option>
-                <option value="22K Everyday Gold Bangles, Kadas & Chains">
-                  22K Everyday Gold Bangles, Kadas & Chains
+                <option value="22K Everyday Solid Gold Chains">
+                  22K Everyday Solid Gold Chains
                 </option>
-                <option value="24K Pure Bullion Coins & Puja Idols">
-                  24K Pure Bullion Coins & Silver Puja Idols
+                <option value="Old Gold 5-Minute Cash / Exchange Valuation">
+                  Old Gold 5-Minute Cash / Exchange Valuation
                 </option>
               </select>
             </div>

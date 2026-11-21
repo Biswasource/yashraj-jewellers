@@ -387,7 +387,7 @@ export default function AdminDashboardPage() {
     id: "",
     name: "",
     code: "",
-    category: "necklaces",
+    category: "bracelets",
     metal: "gold",
     purity: "22KT (916 BIS)",
     gender: "women",

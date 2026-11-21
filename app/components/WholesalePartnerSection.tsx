@@ -36,13 +36,13 @@ export default function WholesalePartnerSection() {
     {
       icon: Gem,
       title: "Extensive Ready Catalogue",
-      desc: "Instant access to thousands of ready-to-ship designs across antique gold, temple polki, lightweight diamond solitaires, and 925 silver.",
-      tag: "10,000+ Ready Designs",
+      desc: "Instant access to thousands of ready-to-ship designs across 22K gold chains, royal earrings, certified diamond rings, and bracelets.",
+      tag: "Ready Catalogue",
     },
     {
       icon: ShieldCheck,
       title: "100% Certified Quality",
-      desc: "Every gram of gold is BIS 916 hallmarked, natural diamonds are IGI/SGL certified, and silver is stamped 925 sterling purity.",
+      desc: "Every gram of gold is BIS 916 hallmarked and natural diamonds are certified with IGI/SGL authentic grading reports.",
       tag: "BIS 916 & IGI Certified",
     },
     {
@@ -73,7 +73,7 @@ export default function WholesalePartnerSection() {
 
           <MotionFadeIn delay={0.25}>
             <p className="text-sm sm:text-base text-[#4A5568] mt-4 leading-relaxed max-w-3xl mx-auto font-sans">
-              Yashraj Jewellery is a premium jewellery wholesale business offering a wide range of gold, diamond, silver, bridal, and traditional jewellery collections for retailers, resellers, and jewellery businesses. We focus on quality, elegant designs, competitive wholesale pricing, and trusted business partnerships. Our goal is to help jewellery retailers grow their businesses with beautiful collections and reliable service.
+              Yashraj Jewellery is a premium jewellery wholesale business offering fine collections of 22K gold chains, diamond rings, royal earrings, and bracelets for retailers, resellers, and jewellery businesses. We focus on quality, elegant designs, competitive wholesale pricing, and trusted business partnerships.
             </p>
           </MotionFadeIn>
         </div>

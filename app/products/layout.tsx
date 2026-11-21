@@ -3,15 +3,14 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "100% BIS 916 Hallmarked Jewellery Catalogue | Wholesale Prices",
   description:
-    "Explore authentic 22K & 24K gold necklaces, royal bangles, bridal chokers, certified diamond solitaires, and pure Cuttack silver filigree creations at direct wholesale rates at Yashraj Jewellers.",
+    "Explore authentic 22K gold chains, diamond solitaire rings, royal earrings, and certified tennis bracelets at direct wholesale rates at Yashraj Jewellers.",
   keywords: [
     "Gold Jewellery Catalogue",
-    "BIS 916 Gold Necklaces",
-    "22K Gold Bangles",
-    "Bridal Jewellery Wholesale",
+    "22K Gold Chains",
     "Diamond Solitaire Rings",
-    "Silver Filigree Tarakasi",
-    "Gold Coins 24K 999",
+    "Gold Earrings Jhumkas",
+    "Diamond Tennis Bracelets",
+    "BIS 916 Hallmark",
     "Yashraj Jewellers Products",
     "Wholesale Jewellery Bhubaneswar",
   ],
@@ -21,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "100% BIS 916 Hallmarked Jewellery Catalogue | Yashraj Jewellers",
     description:
-      "Explore handcrafted bridal jewellery, gold necklaces, bangles, diamond solitaires, and silver filigree at direct wholesale prices.",
+      "Explore handcrafted 22K gold chains, diamond rings, royal earrings, and elegant bracelets at direct wholesale prices.",
     url: "/products",
     images: [
       {
